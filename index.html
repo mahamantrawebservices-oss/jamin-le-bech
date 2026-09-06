@@ -3,19 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Land Buy & Sell</title>
+  <title>Jamin Le Bech</title>
   
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 font-sans pb-20 select-none">
 
-  <!-- ========================================== -->
-  <!-- 1. SPLASH SCREEN                           -->
-  <!-- ========================================== -->
   <div id="splash-screen" class="fixed inset-0 bg-emerald-700 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-300">
     <div class="text-center space-y-4">
       <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
@@ -24,32 +19,59 @@
       <h1 class="text-3xl font-extrabold tracking-wide">Jamin Le Bech</h1>
       <p class="text-sm text-emerald-100">Your Land, Right Value</p>
       
-      <!-- Progress Bar -->
       <div class="w-48 bg-emerald-900/50 rounded-full h-1.5 mx-auto overflow-hidden mt-6">
         <div id="splash-progress" class="bg-white h-full w-0 transition-all duration-75"></div>
       </div>
     </div>
   </div>
 
-  <!-- App Header -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-50 hidden transition-opacity"></div>
+
+  <aside id="sidebar-menu" class="fixed top-0 left-0 w-64 h-full bg-white z-50 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="bg-emerald-600 text-white p-5 flex items-center gap-3">
+      <i class="fa-solid fa-circle-user text-4xl"></i>
+      <div>
+        <h3 id="sidebar-user-name" class="font-bold text-sm">Guest User</h3>
+        <p id="sidebar-user-phone" class="text-xs opacity-80">Welcome</p>
+      </div>
+    </div>
+    
+    <nav class="flex-1 p-4 space-y-2 text-gray-700 font-medium text-sm">
+      <button id="menu-home" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition">
+        <i class="fa-solid fa-house w-5"></i> Home
+      </button>
+      <button id="menu-terms" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition">
+        <i class="fa-solid fa-file-contract w-5"></i> Terms & Conditions
+      </button>
+      <button id="menu-privacy" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition">
+        <i class="fa-solid fa-shield-halved w-5"></i> Privacy Policy
+      </button>
+      <button id="menu-share" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition">
+        <i class="fa-solid fa-share-nodes w-5"></i> Share App
+      </button>
+    </nav>
+
+    <div class="p-4 border-t text-center text-xs text-gray-400">
+      App Version 2.0
+    </div>
+  </aside>
+
   <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-40 flex justify-between items-center">
+    <button id="open-sidebar-btn" class="text-xl">
+      <i class="fa-solid fa-bars"></i>
+    </button>
     <h1 class="text-xl font-bold flex items-center gap-2">
       <i class="fa-solid fa-mountain-city"></i> Jamin Le Bech
     </h1>
     <div id="recaptcha-container"></div>
   </header>
 
-  <!-- Main Container -->
   <main class="p-4 max-w-md mx-auto">
 
-    <!-- ========================================== -->
-    <!-- 2. AUTH SECTION                            -->
-    <!-- ========================================== -->
     <section id="auth-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4 text-center mt-10">
       <h2 class="text-2xl font-bold text-gray-800">Login</h2>
       <p class="text-xs text-gray-500">Get OTP using your mobile number</p>
       
-      <!-- Phone Input Group -->
       <div id="phone-input-group" class="space-y-3">
         <div class="flex items-center border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
           <span class="bg-gray-100 px-3 py-2 text-gray-600 font-semibold">+91</span>
@@ -60,7 +82,6 @@
         </button>
       </div>
 
-      <!-- OTP Input Group -->
       <div id="otp-input-group" class="hidden space-y-3">
         <input type="number" id="otp-code" placeholder="Enter 6-digit OTP" class="w-full p-2.5 border rounded-lg text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-emerald-500">
         <button id="verify-otp-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
@@ -69,9 +90,6 @@
       </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 3. PROFILE SETUP SECTION                   -->
-    <!-- ========================================== -->
     <section id="profile-setup-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
       <h2 class="text-xl font-bold text-gray-800 text-center">Complete Your Profile</h2>
       <form id="profile-form" class="space-y-3">
@@ -97,63 +115,73 @@
       </form>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 4. HOME SECTION                            -->
-    <!-- ========================================== -->
-    <section id="home-section" class="hidden space-y-4">
-      <!-- Search & Filter Bar -->
-      <div class="bg-white p-3 rounded-lg shadow-sm space-y-2">
-        <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="filter-location" placeholder="Search location..." class="p-2 border rounded text-xs outline-none">
-          <input type="number" id="filter-max-price" placeholder="Max Price ₹" class="p-2 border rounded text-xs outline-none">
+    <section id="home-section" class="hidden space-y-3">
+      
+      <div class="relative flex items-center">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 text-gray-400 text-sm"></i>
+        <input type="text" id="search-location" placeholder="Search village, city or area..." class="w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm">
+        <button id="toggle-filter-btn" class="absolute right-2 p-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 text-xs">
+        <div class="flex items-center gap-2 text-emerald-800">
+          <i class="fa-solid fa-location-crosshairs text-base text-emerald-600"></i>
+          <span>Find Lands within <b>50 KM</b> radius</span>
         </div>
-        <button id="apply-filter-btn" class="w-full bg-emerald-600 text-white py-1.5 rounded text-xs font-semibold hover:bg-emerald-700">
+        <button id="geo-radius-btn" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-[11px] font-bold hover:bg-emerald-700">
+          Detect
+        </button>
+      </div>
+
+      <div id="filter-drawer" class="hidden bg-white p-3.5 rounded-xl shadow-sm border space-y-3">
+        <div class="flex justify-between items-center text-xs font-bold text-gray-700 border-b pb-2">
+          <span>Filters</span>
+          <button id="clear-filter-btn" class="text-red-500 font-semibold hover:underline"><i class="fa-solid fa-rotate-left"></i> Reset Filter</button>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] text-gray-500">Max Price (₹)</label>
+            <input type="number" id="filter-max-price" placeholder="e.g. 5000000" class="w-full p-2 border rounded text-xs outline-none">
+          </div>
+          <div>
+            <label class="text-[10px] text-gray-500">Min Size</label>
+            <input type="text" id="filter-size" placeholder="e.g. 2 Vigha" class="w-full p-2 border rounded text-xs outline-none">
+          </div>
+        </div>
+
+        <button id="apply-filter-btn" class="w-full bg-emerald-600 text-white py-1.5 rounded-lg text-xs font-semibold">
           Apply Filter
         </button>
       </div>
 
-      <!-- Land Posts List Container -->
       <div id="posts-container" class="space-y-3">
-        <!-- Posts load dynamically -->
-      </div>
+        </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 5. POST DETAIL SECTION                     -->
-    <!-- ========================================== -->
     <section id="post-detail-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-4">
       <button id="back-to-home-btn" class="text-xs text-emerald-600 font-bold flex items-center gap-1">
         <i class="fa-solid fa-arrow-left"></i> Back to Home
       </button>
-      <div id="post-detail-content">
-        <!-- Post details load dynamically -->
-      </div>
+      <div id="post-detail-content"></div>
       <button id="start-chat-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-emerald-700">
         <i class="fa-solid fa-comments"></i> Start Chat
       </button>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 6. CHAT LIST SECTION                       -->
-    <!-- ========================================== -->
     <section id="chat-list-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
       <h2 class="text-lg font-bold text-gray-800">Your Messages</h2>
-      <div id="user-chats-container" class="space-y-2">
-        <!-- Chats list loads dynamically -->
-      </div>
+      <div id="user-chats-container" class="space-y-2"></div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 7. CHAT VIEW SECTION                       -->
-    <!-- ========================================== -->
     <section id="chat-view-section" class="hidden bg-white rounded-xl shadow-md flex flex-col h-[75vh]">
       <div class="bg-emerald-600 text-white p-3 font-bold text-sm rounded-t-xl flex justify-between items-center">
         <span id="chat-header">Chat Window</span>
         <button onclick="showSection('chatList')" class="text-xs bg-emerald-700 px-2 py-1 rounded">Close</button>
       </div>
-      <div id="chat-messages" class="flex-1 p-3 overflow-y-auto space-y-2 bg-gray-50 flex flex-col">
-        <!-- Live Chat Messages -->
-      </div>
+      <div id="chat-messages" class="flex-1 p-3 overflow-y-auto space-y-2 bg-gray-50 flex flex-col"></div>
       <div class="p-2 border-t flex gap-2">
         <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 p-2 border rounded-lg text-sm outline-none">
         <button id="send-msg-btn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">
@@ -162,9 +190,6 @@
       </div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 8. ADD POST SECTION                        -->
-    <!-- ========================================== -->
     <section id="add-post-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
       <h2 class="text-lg font-bold text-gray-800">Post New Listing</h2>
       <form id="add-post-form" class="space-y-3">
@@ -172,6 +197,12 @@
         <input type="number" id="post-price" placeholder="Price ₹" required class="w-full p-2 border rounded text-sm outline-none">
         <input type="text" id="post-size" placeholder="Area Size (e.g. 2 Vigha / 100 Sq.Yard)" required class="w-full p-2 border rounded text-sm outline-none">
         <input type="text" id="post-location" placeholder="Location / Village / Taluka" required class="w-full p-2 border rounded text-sm outline-none">
+        
+        <button type="button" id="fetch-post-coords-btn" class="w-full bg-gray-100 text-emerald-700 border border-emerald-300 py-1.5 rounded text-xs font-semibold flex justify-center items-center gap-2">
+          <i class="fa-solid fa-location-pin"></i> Add GPS Location (For 50KM Radius Search)
+        </button>
+        <p id="coords-status" class="text-[10px] text-gray-400 text-center"></p>
+
         <textarea id="post-description" placeholder="Provide land details..." required class="w-full p-2 border rounded text-sm outline-none h-20"></textarea>
         <div>
           <label class="text-xs text-gray-600">Land Photos (Max 5):</label>
@@ -183,19 +214,11 @@
       </form>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 9. MY ADS SECTION                          -->
-    <!-- ========================================== -->
     <section id="my-ads-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
       <h2 class="text-lg font-bold text-gray-800">My Listings</h2>
-      <div id="my-ads-container" class="space-y-2">
-        <!-- User's own ads load here -->
-      </div>
+      <div id="my-ads-container" class="space-y-2"></div>
     </section>
 
-    <!-- ========================================== -->
-    <!-- 10. ACCOUNT SECTION                        -->
-    <!-- ========================================== -->
     <section id="account-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4 text-center">
       <img id="acc-img" src="https://via.placeholder.com/100" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-emerald-600 shadow">
       <div>
@@ -213,15 +236,33 @@
 
   </main>
 
-  <!-- ========================================== -->
-  <!-- MODALS (DISCLAIMER & PAYMENT)               -->
-  <!-- ========================================== -->
-  <!-- Disclaimer Modal -->
+  <div id="terms-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-5 rounded-xl max-w-md space-y-3 max-h-[80vh] overflow-y-auto">
+      <h3 class="font-bold text-gray-800 text-lg border-b pb-1">Terms & Conditions</h3>
+      <p class="text-xs text-gray-600 leading-relaxed">
+        1. Buyers must verify land documents independently.<br>
+        2. "Jamin Le Bech" platform is not responsible for any financial loss or fraudulent deal.<br>
+        3. All uploaded photos and land details must be authentic.
+      </p>
+      <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="w-full bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Close</button>
+    </div>
+  </div>
+
+  <div id="privacy-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-5 rounded-xl max-w-md space-y-3 max-h-[80vh] overflow-y-auto">
+      <h3 class="font-bold text-gray-800 text-lg border-b pb-1">Privacy Policy</h3>
+      <p class="text-xs text-gray-600 leading-relaxed">
+        We value your privacy. Your phone number is strictly used for authentication and connecting real buyers with sellers. We do not sell user data to third parties.
+      </p>
+      <button onclick="document.getElementById('privacy-modal').classList.add('hidden')" class="w-full bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Close</button>
+    </div>
+  </div>
+
   <div id="disclaimer-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
     <div class="bg-white p-5 rounded-xl max-w-sm space-y-3">
       <h3 class="font-bold text-red-600 text-lg">Terms & Conditions</h3>
       <p class="text-xs text-gray-600 leading-relaxed">
-        Please verify all land legal documents independently before making any purchase. This platform is not responsible for any financial transactions.
+        Please verify all land legal documents independently before making any purchase.
       </p>
       <div class="flex gap-2 pt-2">
         <button id="decline-disclaimer-btn" class="w-1/2 bg-gray-200 py-2 rounded text-xs font-semibold">Decline</button>
@@ -230,7 +271,6 @@
     </div>
   </div>
 
-  <!-- Payment Modal -->
   <div id="payment-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
     <div class="bg-white p-5 rounded-xl max-w-sm space-y-3 text-center">
       <h3 class="font-bold text-gray-800 text-lg">Pay Listing Fee</h3>
@@ -244,48 +284,35 @@
     </div>
   </div>
 
-  <!-- ========================================== -->
-  <!-- ATTRACTIVE FLOATING BOTTOM NAVIGATION      -->
-  <!-- ========================================== -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around items-center px-2 py-1.5 z-50 shadow-lg">
-    
-    <!-- 1. Home -->
-    <button id="nav-home" class="flex flex-col items-center justify-center text-emerald-600 w-16 py-1 transition-all active:scale-95">
+    <button id="nav-home" class="flex flex-col items-center justify-center text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-house text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">Home</span>
     </button>
 
-    <!-- 2. Chat -->
-    <button id="nav-chat" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
+    <button id="nav-chat" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-comment-dots text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">Chat</span>
     </button>
 
-    <!-- 3. Floating (+) Add Button -->
     <div class="relative -top-5 flex items-center justify-center">
-      <!-- Pulse Ring -->
       <div class="absolute w-14 h-14 bg-emerald-400 rounded-full animate-ping opacity-30"></div>
-      
-      <button id="nav-add" class="relative bg-gradient-to-tr from-emerald-600 to-teal-400 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 border-4 border-white">
+      <button id="nav-add" class="relative bg-gradient-to-tr from-emerald-600 to-teal-400 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 border-4 border-white">
         <i class="fa-solid fa-plus text-2xl font-bold"></i>
       </button>
     </div>
 
-    <!-- 4. My Ads -->
-    <button id="nav-myads" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
+    <button id="nav-myads" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-rectangle-ad text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">My Ads</span>
     </button>
 
-    <!-- 5. Account -->
-    <button id="nav-account" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
+    <button id="nav-account" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-user text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">Account</span>
     </button>
-
   </nav>
 
-  <!-- App Script -->
   <script type="module" src="js/app.js"></script>
 
 </body>
