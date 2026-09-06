@@ -3,7 +3,7 @@ import {
   getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
-  getFirestore, doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, onSnapshot, orderBy, serverTimestamp 
+  getFirestore, doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -12,31 +12,26 @@ const firebaseConfig = {
   projectId: "jamin-le-bech",
   storageBucket: "jamin-le-bech.firebasestorage.app",
   messagingSenderId: "167990473306",
-  appId: "1:167990473306:web:c8ac82925d5f5bbf2a5e63",
-  measurementId: "G-86474BTQCQ"
+  appId: "1:167990473306:web:c8ac82925d5f5bbf2a5e63"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// State Variables
+// App State
 let currentUser = null;
-let currentUserData = null;
-let confirmationResult = null;
-let selectedPostForDetail = null;
-let activeChatId = null;
-let pendingPostData = null;
-let currentPostCoords = null;
 let activeUserGeoLocation = null;
+let leafletMap = null;
+let mapMarker = null;
+let mapSelectedCoords = null;
+let newPostCoords = null;
 
 const sections = {
   auth: document.getElementById('auth-section'),
   profileSetup: document.getElementById('profile-setup-section'),
   home: document.getElementById('home-section'),
   postDetail: document.getElementById('post-detail-section'),
-  chatView: document.getElementById('chat-view-section'),
-  chatList: document.getElementById('chat-list-section'),
   addPost: document.getElementById('add-post-section'),
   myAds: document.getElementById('my-ads-section'),
   account: document.getElementById('account-section')
@@ -53,63 +48,26 @@ function showSection(sectionKey) {
   }
 }
 
-// 50 KM Haversine Distance Calculator
+// Haversine 50 KM Formula
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the earth in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a = 
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2); 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-  return R * c; // Distance in km
-}
-
-// Compress Image (<100KB)
-function compressAndConvertToBase64(file, maxWidth = 400) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      img.onerror = error => reject(error);
-    };
-    reader.onerror = error => reject(error);
-  });
-}
-
-function fileToBase64(file) {
-  return compressAndConvertToBase64(file, 600);
+  return R * c;
 }
 
 // Splash Screen
 function startSplashScreenAnimation(callback) {
   const progressBar = document.getElementById('splash-progress');
   const splashScreen = document.getElementById('splash-screen');
-  
   let progress = 0;
   const interval = setInterval(() => {
-    progress += 2;
+    progress += 5;
     if (progressBar) progressBar.style.width = `${progress}%`;
-
     if (progress >= 100) {
       clearInterval(interval);
       if (splashScreen) {
@@ -122,24 +80,26 @@ function startSplashScreenAnimation(callback) {
         callback();
       }
     }
-  }, 40);
+  }, 30);
 }
 
-// Sidebar Navigation Control
+// Sidebar Handling (FIXED)
 const sidebar = document.getElementById('sidebar-menu');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 
-document.getElementById('open-sidebar-btn')?.addEventListener('click', () => {
+function openSidebar() {
   sidebar.classList.remove('-translate-x-full');
   sidebarOverlay.classList.remove('hidden');
-});
-
-sidebarOverlay?.addEventListener('click', closeSidebar);
+}
 
 function closeSidebar() {
   sidebar.classList.add('-translate-x-full');
   sidebarOverlay.classList.add('hidden');
 }
+
+document.getElementById('open-sidebar-btn')?.addEventListener('click', openSidebar);
+document.getElementById('close-sidebar-btn')?.addEventListener('click', closeSidebar);
+sidebarOverlay?.addEventListener('click', closeSidebar);
 
 document.getElementById('menu-home')?.addEventListener('click', () => { closeSidebar(); showSection('home'); loadPosts(); });
 document.getElementById('menu-terms')?.addEventListener('click', () => { closeSidebar(); document.getElementById('terms-modal').classList.remove('hidden'); });
@@ -147,70 +107,28 @@ document.getElementById('menu-privacy')?.addEventListener('click', () => { close
 document.getElementById('menu-share')?.addEventListener('click', () => {
   closeSidebar();
   if (navigator.share) {
-    navigator.share({ title: 'Jamin Le Bech', text: 'Buy and Sell Land easily!', url: window.location.href });
+    navigator.share({ title: 'Jamin Le Bech', text: 'Buy & Sell Land', url: window.location.href });
   } else {
-    alert("Share link copied to clipboard!");
+    alert("App link copied to clipboard!");
   }
 });
 
-// Auth & OTP
-function setupRecaptcha() {
-  if (!window.recaptchaVerifier) {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': () => {}
-    });
-  }
-}
-
-document.getElementById('send-otp-btn')?.addEventListener('click', async () => {
-  let phone = document.getElementById('phone-number').value.trim().replace(/[\s\-\(\)]/g, "");
-  if (!phone.startsWith("+")) phone = "+91" + phone;
-
-  if (phone.length !== 13) return alert("Please enter a valid 10-digit mobile number");
-
-  try {
-    setupRecaptcha();
-    confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-    document.getElementById('phone-input-group')?.classList.add('hidden');
-    document.getElementById('otp-input-group')?.classList.remove('hidden');
-    alert("OTP sent successfully!");
-  } catch (error) {
-    alert("Error sending OTP: " + error.message);
-  }
+// App Refresh Button (FIXED)
+document.getElementById('app-refresh-btn')?.addEventListener('click', () => {
+  document.getElementById('search-location').value = "";
+  document.getElementById('filter-max-price').value = "";
+  activeUserGeoLocation = null;
+  document.getElementById('active-geo-status').classList.add('hidden');
+  loadPosts();
 });
 
-document.getElementById('verify-otp-btn')?.addEventListener('click', async () => {
-  const code = document.getElementById('otp-code').value.trim();
-  if (code.length !== 6) return alert("Enter 6-digit OTP");
+// Bottom Navigation Fix
+document.getElementById('nav-home')?.addEventListener('click', () => { showSection('home'); loadPosts(); });
+document.getElementById('nav-add')?.addEventListener('click', () => showSection('addPost'));
+document.getElementById('nav-myads')?.addEventListener('click', () => { showSection('myAds'); loadMyPosts(); });
+document.getElementById('nav-account')?.addEventListener('click', () => showSection('account'));
 
-  try {
-    const result = await confirmationResult.confirm(code);
-    currentUser = result.user;
-    checkUserProfile(currentUser);
-  } catch (error) {
-    alert("Invalid OTP! Try again.");
-  }
-});
-
-async function checkUserProfile(user) {
-  try {
-    const userDoc = await getDoc(doc(db, "users", user.uid));
-    if (userDoc.exists()) {
-      currentUserData = userDoc.data();
-      document.getElementById('sidebar-user-name').innerText = currentUserData.name || "User";
-      document.getElementById('sidebar-user-phone').innerText = currentUser.phoneNumber || "";
-      showSection('home');
-      loadPosts();
-    } else {
-      showSection('profileSetup');
-    }
-  } catch (err) {
-    showSection('profileSetup');
-  }
-}
-
-// Toggle & Reset Filter
+// Search & Filter Drawer
 document.getElementById('toggle-filter-btn')?.addEventListener('click', () => {
   document.getElementById('filter-drawer').classList.toggle('hidden');
 });
@@ -219,33 +137,77 @@ document.getElementById('clear-filter-btn')?.addEventListener('click', () => {
   document.getElementById('search-location').value = "";
   document.getElementById('filter-max-price').value = "";
   document.getElementById('filter-size').value = "";
-  activeUserGeoLocation = null;
   loadPosts();
 });
 
-// Geolocation Detect for 50KM Radius Search
+// Search Input Dynamic Event
+document.getElementById('search-location')?.addEventListener('input', loadPosts);
+document.getElementById('apply-filter-btn')?.addEventListener('click', loadPosts);
+
+// Geolocation 50 KM Detection (FIXED)
 document.getElementById('geo-radius-btn')?.addEventListener('click', () => {
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(position => {
-      activeUserGeoLocation = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      };
-      alert("Location detected! Showing listings within 50 KM radius.");
+    navigator.geolocation.getCurrentPosition(pos => {
+      activeUserGeoLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      document.getElementById('active-geo-status').classList.remove('hidden');
+      document.getElementById('geo-status-text').innerHTML = `<i class="fa-solid fa-circle-check"></i> 50 KM Radius Active (GPS)`;
       loadPosts();
     }, () => {
-      alert("Unable to fetch location. Please allow GPS access.");
+      alert("Please allow location access on your phone/browser.");
     });
   }
 });
 
-// Load Posts with Spelling-Friendly Search and Filters
+document.getElementById('clear-geo-btn')?.addEventListener('click', () => {
+  activeUserGeoLocation = null;
+  document.getElementById('active-geo-status').classList.add('hidden');
+  loadPosts();
+});
+
+// Interactive Map Picker (Leaflet OSM)
+document.getElementById('open-map-picker-btn')?.addEventListener('click', () => {
+  const mapModal = document.getElementById('map-modal');
+  mapModal.classList.remove('hidden');
+
+  setTimeout(() => {
+    if (!leafletMap) {
+      leafletMap = L.map('leaflet-map').setView([22.3072, 73.1812], 8); // Default Gujarat Center
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(leafletMap);
+
+      leafletMap.on('click', (e) => {
+        mapSelectedCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+        if (mapMarker) leafletMap.removeLayer(mapMarker);
+        mapMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(leafletMap);
+        document.getElementById('selected-map-coords').innerText = `Lat: ${e.latlng.lat.toFixed(4)}, Lng: ${e.latlng.lng.toFixed(4)}`;
+      });
+    } else {
+      leafletMap.invalidateSize();
+    }
+  }, 200);
+});
+
+document.getElementById('close-map-btn')?.addEventListener('click', () => {
+  document.getElementById('map-modal').classList.add('hidden');
+});
+
+document.getElementById('confirm-map-loc-btn')?.addEventListener('click', () => {
+  if (!mapSelectedCoords) return alert("Please click on the map to select location!");
+  activeUserGeoLocation = mapSelectedCoords;
+  document.getElementById('map-modal').classList.add('hidden');
+  document.getElementById('active-geo-status').classList.remove('hidden');
+  document.getElementById('geo-status-text').innerHTML = `<i class="fa-solid fa-map-pin"></i> 50 KM Map Filter Active`;
+  loadPosts();
+});
+
+// Load Posts Function
 async function loadPosts() {
   const container = document.getElementById('posts-container');
   if (!container) return;
-  container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading land listings...</p>";
+  container.innerHTML = "<p class='text-center py-6 text-gray-500 font-medium'>Loading land listings...</p>";
 
-  const searchText = document.getElementById('search-location')?.value.toLowerCase().trim() || "";
+  const queryText = document.getElementById('search-location')?.value.toLowerCase().trim() || "";
   const maxPriceFilter = Number(document.getElementById('filter-max-price')?.value) || 0;
 
   try {
@@ -253,162 +215,79 @@ async function loadPosts() {
     const snapshot = await getDocs(q);
 
     container.innerHTML = "";
-    if (snapshot.empty) {
-      container.innerHTML = "<p class='text-center py-4 text-gray-500'>No land listings available.</p>";
-      return;
-    }
+    let count = 0;
 
     snapshot.forEach(docSnap => {
       const post = { id: docSnap.id, ...docSnap.data() };
 
-      // Partial / Fuzzy match for spelling mistakes
-      if (searchText) {
-        const postLoc = (post.location || "").toLowerCase();
-        const postTitle = (post.subject || "").toLowerCase();
-        if (!postLoc.includes(searchText) && !postTitle.includes(searchText)) return;
+      // Fuzzy Search Match
+      if (queryText) {
+        const loc = (post.location || "").toLowerCase();
+        const title = (post.subject || "").toLowerCase();
+        if (!loc.includes(queryText) && !title.includes(queryText)) return;
       }
 
       if (maxPriceFilter && Number(post.price) > maxPriceFilter) return;
 
-      // 50 KM Radius Check
+      // 50 KM Radius Filter
       if (activeUserGeoLocation && post.coords) {
         const dist = getDistanceFromLatLonInKm(
           activeUserGeoLocation.lat, activeUserGeoLocation.lng,
           post.coords.lat, post.coords.lng
         );
-        if (dist > 50) return; // Skip posts beyond 50km
+        if (dist > 50) return;
       }
 
-      const firstImg = post.images && post.images.length > 0 ? post.images[0] : 'https://via.placeholder.com/300x180';
+      count++;
+      const img = (post.images && post.images.length) ? post.images[0] : 'https://via.placeholder.com/300x180';
 
       const card = document.createElement('div');
       card.className = "bg-white rounded-xl shadow overflow-hidden cursor-pointer hover:shadow-md transition";
       card.innerHTML = `
-        <img src="${firstImg}" class="w-full h-40 object-cover" />
+        <img src="${img}" class="w-full h-40 object-cover" />
         <div class="p-3">
           <div class="flex justify-between items-center">
             <span class="text-lg font-bold text-emerald-700">₹${Number(post.price).toLocaleString('en-IN')}</span>
-            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">${post.size}</span>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">${post.size}</span>
           </div>
           <h3 class="font-semibold text-gray-800 text-sm mt-1">${post.subject}</h3>
-          <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot"></i> ${post.location}</p>
+          <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot text-emerald-600"></i> ${post.location}</p>
         </div>
       `;
 
-      card.addEventListener('click', () => openPostDetail(post));
+      card.addEventListener('click', () => {
+        showSection('postDetail');
+        document.getElementById('post-detail-content').innerHTML = `
+          <h2 class="text-xl font-bold">${post.subject}</h2>
+          <p class="text-2xl font-extrabold text-emerald-600">₹${Number(post.price).toLocaleString('en-IN')}</p>
+          <p class="text-sm text-gray-600 my-2"><i class="fa-solid fa-location-dot"></i> ${post.location} (${post.size})</p>
+          <p class="text-xs text-gray-700 bg-gray-50 p-3 rounded">${post.description}</p>
+        `;
+      });
+
       container.appendChild(card);
     });
-  } catch (e) {
-    container.innerHTML = "<p class='text-center py-4 text-gray-500'>Error loading listings.</p>";
+
+    if (count === 0) {
+      container.innerHTML = "<p class='text-center py-6 text-gray-400'>No land listings found.</p>";
+    }
+  } catch (err) {
+    container.innerHTML = "<p class='text-center py-6 text-red-400'>Error loading posts.</p>";
   }
-}
-
-document.getElementById('search-location')?.addEventListener('input', loadPosts);
-document.getElementById('apply-filter-btn')?.addEventListener('click', loadPosts);
-
-// Detail view
-function openPostDetail(post) {
-  selectedPostForDetail = post;
-  showSection('postDetail');
-
-  const content = document.getElementById('post-detail-content');
-  if (!content) return;
-
-  const imagesHTML = (post.images || []).map(img => `<img src="${img}" class="w-full h-48 object-cover rounded shadow-sm mb-2" />`).join('');
-
-  content.innerHTML = `
-    <div class="space-y-2">
-      <h2 class="text-xl font-bold text-gray-800">${post.subject}</h2>
-      <p class="text-2xl font-extrabold text-emerald-600">₹${Number(post.price).toLocaleString('en-IN')}</p>
-      <div class="flex gap-4 text-sm text-gray-600">
-        <span><i class="fa-solid fa-ruler-combined text-emerald-600"></i> ${post.size}</span>
-        <span><i class="fa-solid fa-location-dot text-emerald-600"></i> ${post.location}</span>
-      </div>
-      <div class="py-2">${imagesHTML}</div>
-      <div class="bg-gray-50 p-3 rounded text-sm text-gray-700 space-y-1">
-        <p class="font-semibold">Description:</p>
-        <p>${post.description}</p>
-      </div>
-    </div>
-  `;
 }
 
 document.getElementById('back-to-home-btn')?.addEventListener('click', () => showSection('home'));
 
-// Fetch GPS Coords for Post creation
-document.getElementById('fetch-post-coords-btn')?.addEventListener('click', () => {
-  const status = document.getElementById('coords-status');
-  if (navigator.geolocation) {
-    status.innerText = "Fetching coordinates...";
-    navigator.geolocation.getCurrentPosition(position => {
-      currentPostCoords = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-      };
-      status.innerText = "GPS Coordinates Attached Successfully!";
-    }, () => {
-      status.innerText = "Failed to fetch GPS location.";
-    });
-  }
-});
-
-// Add Post submit
-document.getElementById('add-post-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const files = Array.from(document.getElementById('post-images').files);
-  if (files.length > 5) return alert("Select maximum 5 images");
-
-  const imagesBase64 = await Promise.all(files.map(f => fileToBase64(f)));
-
-  pendingPostData = {
-    subject: document.getElementById('post-subject').value,
-    price: Number(document.getElementById('post-price').value),
-    size: document.getElementById('post-size').value,
-    location: document.getElementById('post-location').value,
-    description: document.getElementById('post-description').value,
-    coords: currentPostCoords || null,
-    images: imagesBase64,
-    sellerUid: currentUser.uid,
-    sellerPhone: currentUser.phoneNumber,
-    createdAt: serverTimestamp()
-  };
-
-  document.getElementById('disclaimer-modal')?.classList.remove('hidden');
-});
-
-document.getElementById('accept-disclaimer-btn')?.addEventListener('click', () => {
-  document.getElementById('disclaimer-modal')?.classList.add('hidden');
-  document.getElementById('payment-modal')?.classList.remove('hidden');
-});
-
-document.getElementById('confirm-pay-btn')?.addEventListener('click', async () => {
-  const utr = document.getElementById('payment-utr').value.trim();
-  if (!utr) return alert("Please enter Transaction UTR Number!");
-
-  if (pendingPostData) {
-    pendingPostData.utr = utr;
-    await addDoc(collection(db, "posts"), pendingPostData);
-    pendingPostData = null;
-    currentPostCoords = null;
-    document.getElementById('payment-modal')?.classList.add('hidden');
-    document.getElementById('add-post-form').reset();
-    alert("Listing posted successfully!");
-    showSection('home');
-    loadPosts();
-  }
-});
-
 // App Init
 window.addEventListener('DOMContentLoaded', () => {
   startSplashScreenAnimation(() => {
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, (user) => {
       hideAllSections();
       if (user) {
         currentUser = user;
-        checkUserProfile(user);
+        showSection('home');
+        loadPosts();
       } else {
-        setupRecaptcha();
         showSection('auth');
       }
     });
