@@ -3,7 +3,7 @@ import {
   getAuth, RecaptchaVerifier, signInWithPhoneNumber, signOut, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
-  getFirestore, doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, orderBy, serverTimestamp 
+  getFirestore, collection, addDoc, getDocs, orderBy, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -19,21 +19,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// App State
 let currentUser = null;
+let confirmationResult = null;
 let activeUserGeoLocation = null;
 let leafletMap = null;
 let mapMarker = null;
 let mapSelectedCoords = null;
-let newPostCoords = null;
+let postCoords = null;
 
 const sections = {
   auth: document.getElementById('auth-section'),
-  profileSetup: document.getElementById('profile-setup-section'),
   home: document.getElementById('home-section'),
   postDetail: document.getElementById('post-detail-section'),
   addPost: document.getElementById('add-post-section'),
-  myAds: document.getElementById('my-ads-section'),
   account: document.getElementById('account-section')
 };
 
@@ -48,87 +46,81 @@ function showSection(sectionKey) {
   }
 }
 
-// Haversine 50 KM Formula
+// 50 KM Distance Formula (Haversine)
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1*(Math.PI/180)) * Math.cos(lat2*(Math.PI/180)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
 
-// Splash Screen
-function startSplashScreenAnimation(callback) {
-  const progressBar = document.getElementById('splash-progress');
-  const splashScreen = document.getElementById('splash-screen');
-  let progress = 0;
-  const interval = setInterval(() => {
-    progress += 5;
-    if (progressBar) progressBar.style.width = `${progress}%`;
-    if (progress >= 100) {
-      clearInterval(interval);
-      if (splashScreen) {
-        splashScreen.classList.add('opacity-0');
-        setTimeout(() => {
-          splashScreen.style.display = 'none';
-          callback();
-        }, 300);
-      } else {
-        callback();
-      }
-    }
-  }, 30);
+// Recaptcha setup for Phone Login
+function initRecaptcha() {
+  if (!window.recaptchaVerifier) {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible'
+    });
+  }
 }
 
-// Sidebar Handling (FIXED)
-const sidebar = document.getElementById('sidebar-menu');
-const sidebarOverlay = document.getElementById('sidebar-overlay');
+// Phone Send OTP (Fix for Test Numbers)
+document.getElementById('send-otp-btn')?.addEventListener('click', async () => {
+  let phone = document.getElementById('phone-number').value.trim();
+  if (phone.length !== 10) return alert("10 અંકનો નંબર લખો!");
 
-function openSidebar() {
-  sidebar.classList.remove('-translate-x-full');
-  sidebarOverlay.classList.remove('hidden');
-}
+  const fullPhoneNumber = "+91" + phone;
 
-function closeSidebar() {
-  sidebar.classList.add('-translate-x-full');
-  sidebarOverlay.classList.add('hidden');
-}
-
-document.getElementById('open-sidebar-btn')?.addEventListener('click', openSidebar);
-document.getElementById('close-sidebar-btn')?.addEventListener('click', closeSidebar);
-sidebarOverlay?.addEventListener('click', closeSidebar);
-
-document.getElementById('menu-home')?.addEventListener('click', () => { closeSidebar(); showSection('home'); loadPosts(); });
-document.getElementById('menu-terms')?.addEventListener('click', () => { closeSidebar(); document.getElementById('terms-modal').classList.remove('hidden'); });
-document.getElementById('menu-privacy')?.addEventListener('click', () => { closeSidebar(); document.getElementById('privacy-modal').classList.remove('hidden'); });
-document.getElementById('menu-share')?.addEventListener('click', () => {
-  closeSidebar();
-  if (navigator.share) {
-    navigator.share({ title: 'Jamin Le Bech', text: 'Buy & Sell Land', url: window.location.href });
-  } else {
-    alert("App link copied to clipboard!");
+  try {
+    initRecaptcha();
+    confirmationResult = await signInWithPhoneNumber(auth, fullPhoneNumber, window.recaptchaVerifier);
+    document.getElementById('phone-input-group').classList.add('hidden');
+    document.getElementById('otp-input-group').classList.remove('hidden');
+    alert("OTP મોકલવામાં આવ્યો છે! (ટેસ્ટ નંબર માટે સેટ કરેલ OTP દાખલ કરો)");
+  } catch (err) {
+    alert("OTP સેન્ડ કરવામાં ભૂલ: " + err.message);
+    if(window.recaptchaVerifier) window.recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
   }
 });
 
-// App Refresh Button (FIXED)
-document.getElementById('app-refresh-btn')?.addEventListener('click', () => {
-  document.getElementById('search-location').value = "";
-  document.getElementById('filter-max-price').value = "";
-  activeUserGeoLocation = null;
-  document.getElementById('active-geo-status').classList.add('hidden');
-  loadPosts();
+// Verify OTP
+document.getElementById('verify-otp-btn')?.addEventListener('click', async () => {
+  const code = document.getElementById('otp-code').value.trim();
+  if (!code) return alert("OTP દાખલ કરો!");
+
+  try {
+    const res = await confirmationResult.confirm(code);
+    currentUser = res.user;
+    onLoginSuccess();
+  } catch (err) {
+    alert("ખોટો OTP! ફરી પ્રયાસ કરો.");
+  }
 });
 
-// Bottom Navigation Fix
+// Sidebar Controls
+document.getElementById('open-sidebar-btn')?.addEventListener('click', () => {
+  document.getElementById('sidebar-menu').classList.remove('-translate-x-full');
+  document.getElementById('sidebar-overlay').classList.remove('hidden');
+});
+
+const closeSidebar = () => {
+  document.getElementById('sidebar-menu').classList.add('-translate-x-full');
+  document.getElementById('sidebar-overlay').classList.add('hidden');
+};
+
+document.getElementById('close-sidebar-btn')?.addEventListener('click', closeSidebar);
+document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
+
+// Bottom Navigation
 document.getElementById('nav-home')?.addEventListener('click', () => { showSection('home'); loadPosts(); });
 document.getElementById('nav-add')?.addEventListener('click', () => showSection('addPost'));
-document.getElementById('nav-myads')?.addEventListener('click', () => { showSection('myAds'); loadMyPosts(); });
 document.getElementById('nav-account')?.addEventListener('click', () => showSection('account'));
 
-// Search & Filter Drawer
+// Search & Filter Events
+document.getElementById('search-location')?.addEventListener('input', loadPosts);
+document.getElementById('apply-filter-btn')?.addEventListener('click', loadPosts);
 document.getElementById('toggle-filter-btn')?.addEventListener('click', () => {
   document.getElementById('filter-drawer').classList.toggle('hidden');
 });
@@ -136,26 +128,37 @@ document.getElementById('toggle-filter-btn')?.addEventListener('click', () => {
 document.getElementById('clear-filter-btn')?.addEventListener('click', () => {
   document.getElementById('search-location').value = "";
   document.getElementById('filter-max-price').value = "";
-  document.getElementById('filter-size').value = "";
   loadPosts();
 });
 
-// Search Input Dynamic Event
-document.getElementById('search-location')?.addEventListener('input', loadPosts);
-document.getElementById('apply-filter-btn')?.addEventListener('click', loadPosts);
+// Map Location Filter Fix
+document.getElementById('open-map-picker-btn')?.addEventListener('click', () => {
+  document.getElementById('map-modal').classList.remove('hidden');
+  setTimeout(() => {
+    if (!leafletMap) {
+      leafletMap = L.map('leaflet-map').setView([22.3072, 73.1812], 7); // Gujarat center
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap);
 
-// Geolocation 50 KM Detection (FIXED)
-document.getElementById('geo-radius-btn')?.addEventListener('click', () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(pos => {
-      activeUserGeoLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      document.getElementById('active-geo-status').classList.remove('hidden');
-      document.getElementById('geo-status-text').innerHTML = `<i class="fa-solid fa-circle-check"></i> 50 KM Radius Active (GPS)`;
-      loadPosts();
-    }, () => {
-      alert("Please allow location access on your phone/browser.");
-    });
-  }
+      leafletMap.on('click', (e) => {
+        mapSelectedCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
+        if (mapMarker) leafletMap.removeLayer(mapMarker);
+        mapMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(leafletMap);
+        document.getElementById('selected-map-coords').innerText = `Lat: ${e.latlng.lat.toFixed(3)}, Lng: ${e.latlng.lng.toFixed(3)}`;
+      });
+    } else {
+      leafletMap.invalidateSize();
+    }
+  }, 200);
+});
+
+document.getElementById('close-map-btn')?.addEventListener('click', () => document.getElementById('map-modal').classList.add('hidden'));
+
+document.getElementById('confirm-map-loc-btn')?.addEventListener('click', () => {
+  if (!mapSelectedCoords) return alert("નકશા પર લોકેશન સિલેક્ટ કરો!");
+  activeUserGeoLocation = mapSelectedCoords;
+  document.getElementById('map-modal').classList.add('hidden');
+  document.getElementById('active-geo-status').classList.remove('hidden');
+  loadPosts();
 });
 
 document.getElementById('clear-geo-btn')?.addEventListener('click', () => {
@@ -164,51 +167,14 @@ document.getElementById('clear-geo-btn')?.addEventListener('click', () => {
   loadPosts();
 });
 
-// Interactive Map Picker (Leaflet OSM)
-document.getElementById('open-map-picker-btn')?.addEventListener('click', () => {
-  const mapModal = document.getElementById('map-modal');
-  mapModal.classList.remove('hidden');
-
-  setTimeout(() => {
-    if (!leafletMap) {
-      leafletMap = L.map('leaflet-map').setView([22.3072, 73.1812], 8); // Default Gujarat Center
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-      }).addTo(leafletMap);
-
-      leafletMap.on('click', (e) => {
-        mapSelectedCoords = { lat: e.latlng.lat, lng: e.latlng.lng };
-        if (mapMarker) leafletMap.removeLayer(mapMarker);
-        mapMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(leafletMap);
-        document.getElementById('selected-map-coords').innerText = `Lat: ${e.latlng.lat.toFixed(4)}, Lng: ${e.latlng.lng.toFixed(4)}`;
-      });
-    } else {
-      leafletMap.invalidateSize();
-    }
-  }, 200);
-});
-
-document.getElementById('close-map-btn')?.addEventListener('click', () => {
-  document.getElementById('map-modal').classList.add('hidden');
-});
-
-document.getElementById('confirm-map-loc-btn')?.addEventListener('click', () => {
-  if (!mapSelectedCoords) return alert("Please click on the map to select location!");
-  activeUserGeoLocation = mapSelectedCoords;
-  document.getElementById('map-modal').classList.add('hidden');
-  document.getElementById('active-geo-status').classList.remove('hidden');
-  document.getElementById('geo-status-text').innerHTML = `<i class="fa-solid fa-map-pin"></i> 50 KM Map Filter Active`;
-  loadPosts();
-});
-
 // Load Posts Function
 async function loadPosts() {
   const container = document.getElementById('posts-container');
   if (!container) return;
-  container.innerHTML = "<p class='text-center py-6 text-gray-500 font-medium'>Loading land listings...</p>";
+  container.innerHTML = "<p class='text-center py-6 text-gray-500'>Listings ડાઉનલોડ થઈ રહી છે...</p>";
 
-  const queryText = document.getElementById('search-location')?.value.toLowerCase().trim() || "";
-  const maxPriceFilter = Number(document.getElementById('filter-max-price')?.value) || 0;
+  const searchText = document.getElementById('search-location')?.value.toLowerCase().trim() || "";
+  const maxPrice = Number(document.getElementById('filter-max-price')?.value) || 0;
 
   try {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
@@ -218,41 +184,33 @@ async function loadPosts() {
     let count = 0;
 
     snapshot.forEach(docSnap => {
-      const post = { id: docSnap.id, ...docSnap.data() };
+      const post = docSnap.data();
 
-      // Fuzzy Search Match
-      if (queryText) {
+      // Search matching logic
+      if (searchText) {
         const loc = (post.location || "").toLowerCase();
-        const title = (post.subject || "").toLowerCase();
-        if (!loc.includes(queryText) && !title.includes(queryText)) return;
+        const sub = (post.subject || "").toLowerCase();
+        if (!loc.includes(searchText) && !sub.includes(searchText)) return;
       }
 
-      if (maxPriceFilter && Number(post.price) > maxPriceFilter) return;
+      if (maxPrice && Number(post.price) > maxPrice) return;
 
-      // 50 KM Radius Filter
+      // 50 KM Distance check
       if (activeUserGeoLocation && post.coords) {
-        const dist = getDistanceFromLatLonInKm(
-          activeUserGeoLocation.lat, activeUserGeoLocation.lng,
-          post.coords.lat, post.coords.lng
-        );
+        const dist = getDistanceFromLatLonInKm(activeUserGeoLocation.lat, activeUserGeoLocation.lng, post.coords.lat, post.coords.lng);
         if (dist > 50) return;
       }
 
       count++;
-      const img = (post.images && post.images.length) ? post.images[0] : 'https://via.placeholder.com/300x180';
-
       const card = document.createElement('div');
-      card.className = "bg-white rounded-xl shadow overflow-hidden cursor-pointer hover:shadow-md transition";
+      card.className = "bg-white p-3 rounded-xl shadow cursor-pointer space-y-1";
       card.innerHTML = `
-        <img src="${img}" class="w-full h-40 object-cover" />
-        <div class="p-3">
-          <div class="flex justify-between items-center">
-            <span class="text-lg font-bold text-emerald-700">₹${Number(post.price).toLocaleString('en-IN')}</span>
-            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">${post.size}</span>
-          </div>
-          <h3 class="font-semibold text-gray-800 text-sm mt-1">${post.subject}</h3>
-          <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot text-emerald-600"></i> ${post.location}</p>
+        <div class="flex justify-between items-center">
+          <span class="text-lg font-bold text-emerald-700">₹${Number(post.price).toLocaleString('en-IN')}</span>
+          <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">${post.size}</span>
         </div>
+        <h3 class="font-semibold text-gray-800 text-sm">${post.subject}</h3>
+        <p class="text-xs text-gray-500"><i class="fa-solid fa-location-dot text-emerald-600"></i> ${post.location}</p>
       `;
 
       card.addEventListener('click', () => {
@@ -260,7 +218,7 @@ async function loadPosts() {
         document.getElementById('post-detail-content').innerHTML = `
           <h2 class="text-xl font-bold">${post.subject}</h2>
           <p class="text-2xl font-extrabold text-emerald-600">₹${Number(post.price).toLocaleString('en-IN')}</p>
-          <p class="text-sm text-gray-600 my-2"><i class="fa-solid fa-location-dot"></i> ${post.location} (${post.size})</p>
+          <p class="text-sm text-gray-600 my-2">${post.location} (${post.size})</p>
           <p class="text-xs text-gray-700 bg-gray-50 p-3 rounded">${post.description}</p>
         `;
       });
@@ -268,28 +226,38 @@ async function loadPosts() {
       container.appendChild(card);
     });
 
-    if (count === 0) {
-      container.innerHTML = "<p class='text-center py-6 text-gray-400'>No land listings found.</p>";
-    }
+    if (count === 0) container.innerHTML = "<p class='text-center py-6 text-gray-400'>કોઈ જમીન મળી નથી.</p>";
   } catch (err) {
-    container.innerHTML = "<p class='text-center py-6 text-red-400'>Error loading posts.</p>";
+    container.innerHTML = "<p class='text-center py-6 text-red-400'>Error loading data.</p>";
   }
 }
 
-document.getElementById('back-to-home-btn')?.addEventListener('click', () => showSection('home'));
+// Success State
+function onLoginSuccess() {
+  document.getElementById('bottom-nav').classList.remove('hidden');
+  document.getElementById('acc-phone').innerText = currentUser.phoneNumber;
+  document.getElementById('sidebar-user-phone').innerText = currentUser.phoneNumber;
+  showSection('home');
+  loadPosts();
+}
 
-// App Init
+// Logout Action
+document.getElementById('logout-btn')?.addEventListener('click', () => {
+  signOut(auth).then(() => {
+    document.getElementById('bottom-nav').classList.add('hidden');
+    showSection('auth');
+  });
+});
+
+// App Startup Check (Auth Guard)
 window.addEventListener('DOMContentLoaded', () => {
-  startSplashScreenAnimation(() => {
-    onAuthStateChanged(auth, (user) => {
-      hideAllSections();
-      if (user) {
-        currentUser = user;
-        showSection('home');
-        loadPosts();
-      } else {
-        showSection('auth');
-      }
-    });
+  onAuthStateChanged(auth, (user) => {
+    document.getElementById('splash-screen').style.display = 'none';
+    if (user) {
+      currentUser = user;
+      onLoginSuccess();
+    } else {
+      showSection('auth');
+    }
   });
 });
