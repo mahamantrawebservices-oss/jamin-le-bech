@@ -1,17 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="gu">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jamin Le Bech</title>
   
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Leaflet Map CSS & JS (Free OpenStreetMap) -->
+  <!-- Leaflet Map CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
@@ -41,8 +38,8 @@
       <div class="flex items-center gap-3">
         <i class="fa-solid fa-circle-user text-4xl"></i>
         <div>
-          <h3 id="sidebar-user-name" class="font-bold text-sm">Guest User</h3>
-          <p id="sidebar-user-phone" class="text-xs opacity-80">Welcome</p>
+          <h3 id="sidebar-user-name" class="font-bold text-sm">User</h3>
+          <p id="sidebar-user-phone" class="text-xs opacity-80">+91 Phone</p>
         </div>
       </div>
       <button id="close-sidebar-btn" class="text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
@@ -68,7 +65,7 @@
     </div>
   </aside>
 
-  <!-- App Header with Refresh Icon -->
+  <!-- App Header -->
   <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-40 flex justify-between items-center">
     <button id="open-sidebar-btn" class="text-xl p-1">
       <i class="fa-solid fa-bars"></i>
@@ -76,7 +73,6 @@
     <h1 class="text-xl font-bold flex items-center gap-2">
       <i class="fa-solid fa-mountain-city"></i> Jamin Le Bech
     </h1>
-    <!-- Refresh Button Right Corner -->
     <button id="app-refresh-btn" class="text-xl p-1 hover:rotate-180 transition-transform duration-500">
       <i class="fa-solid fa-rotate-right"></i>
     </button>
@@ -85,64 +81,43 @@
   <!-- Main Container -->
   <main class="p-4 max-w-md mx-auto">
 
-    <!-- Auth Section -->
-    <section id="auth-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4 text-center mt-10">
-      <h2 class="text-2xl font-bold text-gray-800">Login</h2>
-      <p class="text-xs text-gray-500">Get OTP using your mobile number</p>
+    <!-- Auth Section (Mandatory Login Screen) -->
+    <section id="auth-section" class="bg-white p-6 rounded-xl shadow-md space-y-4 text-center mt-10">
+      <h2 class="text-2xl font-bold text-gray-800">Login / Sign In</h2>
+      <p class="text-xs text-gray-500">Enter mobile number to verify</p>
       
       <div id="phone-input-group" class="space-y-3">
         <div class="flex items-center border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
           <span class="bg-gray-100 px-3 py-2 text-gray-600 font-semibold">+91</span>
-          <input type="tel" id="phone-number" placeholder="Enter 10 digit number" class="w-full p-2 outline-none" maxlength="10">
+          <input type="tel" id="phone-number" placeholder="Enter test number" class="w-full p-2 outline-none" maxlength="10">
         </div>
+        <div id="recaptcha-container"></div>
         <button id="send-otp-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
           Send OTP
         </button>
       </div>
 
       <div id="otp-input-group" class="hidden space-y-3">
-        <input type="number" id="otp-code" placeholder="Enter 6-digit OTP" class="w-full p-2.5 border rounded-lg text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-emerald-500">
+        <input type="number" id="otp-code" placeholder="Enter Test OTP" class="w-full p-2.5 border rounded-lg text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-emerald-500">
         <button id="verify-otp-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
-          Verify OTP
+          Verify & Login
         </button>
       </div>
     </section>
 
-    <!-- Profile Setup Section -->
-    <section id="profile-setup-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
-      <h2 class="text-xl font-bold text-gray-800 text-center">Complete Your Profile</h2>
-      <form id="profile-form" class="space-y-3">
-        <div>
-          <label class="text-xs text-gray-600 font-medium">Full Name</label>
-          <input type="text" id="prof-name" required class="w-full p-2 border rounded-lg text-sm outline-none focus:border-emerald-600">
-        </div>
-        <div>
-          <label class="text-xs text-gray-600 font-medium">Village / City</label>
-          <input type="text" id="prof-location" required class="w-full p-2 border rounded-lg text-sm outline-none focus:border-emerald-600">
-        </div>
-        <div>
-          <label class="text-xs text-gray-600 font-medium">Age</label>
-          <input type="number" id="prof-age" required class="w-full p-2 border rounded-lg text-sm outline-none focus:border-emerald-600">
-        </div>
-        <button type="submit" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
-          Save Profile
-        </button>
-      </form>
-    </section>
-
-    <!-- HOME SECTION WITH SEPARATED SEARCH, FILTER, GEOLOCATION & MAP -->
+    <!-- HOME SECTION -->
     <section id="home-section" class="hidden space-y-3">
       
-      <!-- 1. Search Bar -->
+      <!-- Search Bar -->
       <div class="relative flex items-center">
         <i class="fa-solid fa-magnifying-glass absolute left-3 text-gray-400 text-sm"></i>
-        <input type="text" id="search-location" placeholder="Search village, city or area..." class="w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm">
+        <input type="text" id="search-location" placeholder="Search location or title..." class="w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm">
         <button id="toggle-filter-btn" class="absolute right-2 p-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold">
           <i class="fa-solid fa-sliders"></i>
         </button>
       </div>
 
-      <!-- 2. Nearby Location (50 KM Radius) & Select on Map Button -->
+      <!-- GPS 50 KM & Map Filter Buttons -->
       <div class="grid grid-cols-2 gap-2">
         <button id="geo-radius-btn" class="flex items-center justify-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl text-xs font-bold hover:bg-emerald-100">
           <i class="fa-solid fa-location-crosshairs text-emerald-600"></i>
@@ -154,27 +129,23 @@
         </button>
       </div>
 
-      <!-- Active Location Status Indicator -->
+      <!-- Active Location Status -->
       <div id="active-geo-status" class="hidden flex items-center justify-between bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs">
-        <span id="geo-status-text"><i class="fa-solid fa-circle-check"></i> Showing lands within 50 KM</span>
-        <button id="clear-geo-btn" class="underline font-semibold text-[10px]">Clear GPS</button>
+        <span id="geo-status-text"><i class="fa-solid fa-circle-check"></i> 50 KM Filter Active</span>
+        <button id="clear-geo-btn" class="underline font-semibold text-[10px]">Clear Map Filter</button>
       </div>
 
-      <!-- 3. Expandable Advanced Filter Drawer -->
+      <!-- Advanced Filter Drawer -->
       <div id="filter-drawer" class="hidden bg-white p-3.5 rounded-xl shadow-sm border space-y-3">
         <div class="flex justify-between items-center text-xs font-bold text-gray-700 border-b pb-2">
           <span>Filters</span>
-          <button id="clear-filter-btn" class="text-red-500 font-semibold hover:underline"><i class="fa-solid fa-rotate-left"></i> Reset Filter</button>
+          <button id="clear-filter-btn" class="text-red-500 font-semibold hover:underline"><i class="fa-solid fa-rotate-left"></i> Reset</button>
         </div>
         
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-[10px] text-gray-500">Max Price (₹)</label>
             <input type="number" id="filter-max-price" placeholder="e.g. 5000000" class="w-full p-2 border rounded text-xs outline-none">
-          </div>
-          <div>
-            <label class="text-[10px] text-gray-500">Min Size</label>
-            <input type="text" id="filter-size" placeholder="e.g. 2 Vigha" class="w-full p-2 border rounded text-xs outline-none">
           </div>
         </div>
 
@@ -184,20 +155,15 @@
       </div>
 
       <!-- Land Posts List Container -->
-      <div id="posts-container" class="space-y-3">
-        <!-- Posts load dynamically -->
-      </div>
+      <div id="posts-container" class="space-y-3"></div>
     </section>
 
     <!-- Post Detail Section -->
     <section id="post-detail-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-4">
       <button id="back-to-home-btn" class="text-xs text-emerald-600 font-bold flex items-center gap-1">
-        <i class="fa-solid fa-arrow-left"></i> Back to Home
+        <i class="fa-solid fa-arrow-left"></i> Back
       </button>
       <div id="post-detail-content"></div>
-      <button id="start-chat-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-emerald-700">
-        <i class="fa-solid fa-comments"></i> Start Chat
-      </button>
     </section>
 
     <!-- Add Post Section -->
@@ -207,28 +173,18 @@
         <input type="text" id="post-subject" placeholder="Title (e.g. 5 Vigha Land)" required class="w-full p-2 border rounded text-sm outline-none">
         <input type="number" id="post-price" placeholder="Price ₹" required class="w-full p-2 border rounded text-sm outline-none">
         <input type="text" id="post-size" placeholder="Area Size (e.g. 2 Vigha)" required class="w-full p-2 border rounded text-sm outline-none">
-        <input type="text" id="post-location" placeholder="Location / Village / Taluka" required class="w-full p-2 border rounded text-sm outline-none">
+        <input type="text" id="post-location" placeholder="Location / Village" required class="w-full p-2 border rounded text-sm outline-none">
         
         <button type="button" id="fetch-post-coords-btn" class="w-full bg-emerald-50 text-emerald-700 border border-emerald-300 py-2 rounded text-xs font-semibold flex justify-center items-center gap-2">
-          <i class="fa-solid fa-location-dot"></i> Attach GPS Location for 50KM Filter
+          <i class="fa-solid fa-location-dot"></i> Get Current GPS Location
         </button>
         <p id="coords-status" class="text-[11px] text-emerald-600 font-semibold text-center"></p>
 
-        <textarea id="post-description" placeholder="Provide land details..." required class="w-full p-2 border rounded text-sm outline-none h-20"></textarea>
-        <div>
-          <label class="text-xs text-gray-600">Land Photos (Max 5):</label>
-          <input type="file" id="post-images" accept="image/*" multiple required class="w-full p-1 border rounded text-xs mt-1">
-        </div>
+        <textarea id="post-description" placeholder="Land details..." required class="w-full p-2 border rounded text-sm outline-none h-20"></textarea>
         <button type="submit" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700">
-          Proceed
+          Post Listing
         </button>
       </form>
-    </section>
-
-    <!-- My Ads Section -->
-    <section id="my-ads-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
-      <h2 class="text-lg font-bold text-gray-800">My Listings</h2>
-      <div id="my-ads-container" class="space-y-2"></div>
     </section>
 
     <!-- Account Section -->
@@ -237,8 +193,8 @@
         <i class="fa-solid fa-user"></i>
       </div>
       <div>
-        <h3 id="acc-name" class="text-xl font-bold text-gray-800">User Name</h3>
-        <p id="acc-phone" class="text-xs text-gray-500">+91 0000000000</p>
+        <h3 id="acc-name" class="text-xl font-bold text-gray-800">User Profile</h3>
+        <p id="acc-phone" class="text-xs text-gray-500">+91 Mobile Number</p>
       </div>
       <button id="logout-btn" class="w-full bg-red-500 text-white py-2 rounded-lg font-semibold text-sm hover:bg-red-600">
         Logout
@@ -251,64 +207,33 @@
   <div id="map-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-xl overflow-hidden shadow-2xl flex flex-col h-[80vh]">
       <div class="bg-emerald-600 text-white p-3 font-bold text-sm flex justify-between items-center">
-        <span>Click on Map to Select Location</span>
+        <span>Click on Map to Select Center Location</span>
         <button id="close-map-btn" class="text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div id="leaflet-map" class="flex-1 w-full"></div>
       <div class="p-3 bg-gray-50 flex justify-between items-center border-t">
-        <span id="selected-map-coords" class="text-xs text-gray-600 font-mono">Click anywhere on map</span>
-        <button id="confirm-map-loc-btn" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-xs font-bold">Apply 50KM Filter</button>
+        <span id="selected-map-coords" class="text-xs text-gray-600 font-mono">Select location on map</span>
+        <button id="confirm-map-loc-btn" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-xs font-bold">Apply 50KM Search</button>
       </div>
     </div>
   </div>
 
-  <!-- TERMS MODAL -->
-  <div id="terms-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white p-5 rounded-xl max-w-md space-y-3">
-      <h3 class="font-bold text-gray-800 text-lg border-b pb-1">Terms & Conditions</h3>
-      <p class="text-xs text-gray-600 leading-relaxed">
-        Buyers must verify land legal documents independently.
-      </p>
-      <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="w-full bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Close</button>
-    </div>
-  </div>
-
-  <!-- PRIVACY MODAL -->
-  <div id="privacy-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white p-5 rounded-xl max-w-md space-y-3">
-      <h3 class="font-bold text-gray-800 text-lg border-b pb-1">Privacy Policy</h3>
-      <p class="text-xs text-gray-600 leading-relaxed">
-        Your information is securely stored and never shared with third parties.
-      </p>
-      <button onclick="document.getElementById('privacy-modal').classList.add('hidden')" class="w-full bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Close</button>
-    </div>
-  </div>
-
-  <!-- FLOATING BOTTOM NAVIGATION -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around items-center px-2 py-1.5 z-40 shadow-lg">
+  <!-- FLOATING BOTTOM NAVIGATION (Only active when Logged In) -->
+  <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around items-center px-2 py-1.5 z-40 shadow-lg">
     <button id="nav-home" class="flex flex-col items-center justify-center text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-house text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">Home</span>
     </button>
-
     <button id="nav-add" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-plus-circle text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">Post Ad</span>
     </button>
-
-    <button id="nav-myads" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
-      <i class="fa-solid fa-rectangle-ad text-xl mb-0.5"></i>
-      <span class="text-[11px] font-medium">My Ads</span>
-    </button>
-
     <button id="nav-account" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-user text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">Account</span>
     </button>
   </nav>
 
-  <!-- App Script -->
   <script type="module" src="js/app.js"></script>
-
 </body>
 </html>
