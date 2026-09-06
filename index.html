@@ -5,12 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jamin Le Bech</title>
   
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
+  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Leaflet Map CSS & JS (Free OpenStreetMap) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="bg-gray-100 font-sans pb-20 select-none">
 
+  <!-- Splash Screen -->
   <div id="splash-screen" class="fixed inset-0 bg-emerald-700 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-300">
     <div class="text-center space-y-4">
       <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
@@ -25,15 +32,20 @@
     </div>
   </div>
 
+  <!-- SIDEBAR MENU OVERLAY -->
   <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-50 hidden transition-opacity"></div>
 
+  <!-- SIDEBAR MENU DRAWER -->
   <aside id="sidebar-menu" class="fixed top-0 left-0 w-64 h-full bg-white z-50 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col">
-    <div class="bg-emerald-600 text-white p-5 flex items-center gap-3">
-      <i class="fa-solid fa-circle-user text-4xl"></i>
-      <div>
-        <h3 id="sidebar-user-name" class="font-bold text-sm">Guest User</h3>
-        <p id="sidebar-user-phone" class="text-xs opacity-80">Welcome</p>
+    <div class="bg-emerald-600 text-white p-5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-circle-user text-4xl"></i>
+        <div>
+          <h3 id="sidebar-user-name" class="font-bold text-sm">Guest User</h3>
+          <p id="sidebar-user-phone" class="text-xs opacity-80">Welcome</p>
+        </div>
       </div>
+      <button id="close-sidebar-btn" class="text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
     </div>
     
     <nav class="flex-1 p-4 space-y-2 text-gray-700 font-medium text-sm">
@@ -56,18 +68,24 @@
     </div>
   </aside>
 
+  <!-- App Header with Refresh Icon -->
   <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-40 flex justify-between items-center">
-    <button id="open-sidebar-btn" class="text-xl">
+    <button id="open-sidebar-btn" class="text-xl p-1">
       <i class="fa-solid fa-bars"></i>
     </button>
     <h1 class="text-xl font-bold flex items-center gap-2">
       <i class="fa-solid fa-mountain-city"></i> Jamin Le Bech
     </h1>
-    <div id="recaptcha-container"></div>
+    <!-- Refresh Button Right Corner -->
+    <button id="app-refresh-btn" class="text-xl p-1 hover:rotate-180 transition-transform duration-500">
+      <i class="fa-solid fa-rotate-right"></i>
+    </button>
   </header>
 
+  <!-- Main Container -->
   <main class="p-4 max-w-md mx-auto">
 
+    <!-- Auth Section -->
     <section id="auth-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4 text-center mt-10">
       <h2 class="text-2xl font-bold text-gray-800">Login</h2>
       <p class="text-xs text-gray-500">Get OTP using your mobile number</p>
@@ -90,6 +108,7 @@
       </div>
     </section>
 
+    <!-- Profile Setup Section -->
     <section id="profile-setup-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
       <h2 class="text-xl font-bold text-gray-800 text-center">Complete Your Profile</h2>
       <form id="profile-form" class="space-y-3">
@@ -105,18 +124,16 @@
           <label class="text-xs text-gray-600 font-medium">Age</label>
           <input type="number" id="prof-age" required class="w-full p-2 border rounded-lg text-sm outline-none focus:border-emerald-600">
         </div>
-        <div>
-          <label class="text-xs text-gray-600 font-medium">Profile Picture</label>
-          <input type="file" id="prof-pic" accept="image/*" class="w-full p-1.5 border rounded-lg text-xs">
-        </div>
         <button type="submit" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
           Save Profile
         </button>
       </form>
     </section>
 
+    <!-- HOME SECTION WITH SEPARATED SEARCH, FILTER, GEOLOCATION & MAP -->
     <section id="home-section" class="hidden space-y-3">
       
+      <!-- 1. Search Bar -->
       <div class="relative flex items-center">
         <i class="fa-solid fa-magnifying-glass absolute left-3 text-gray-400 text-sm"></i>
         <input type="text" id="search-location" placeholder="Search village, city or area..." class="w-full pl-9 pr-10 py-2.5 bg-white border rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm">
@@ -125,16 +142,25 @@
         </button>
       </div>
 
-      <div class="flex items-center justify-between bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 text-xs">
-        <div class="flex items-center gap-2 text-emerald-800">
-          <i class="fa-solid fa-location-crosshairs text-base text-emerald-600"></i>
-          <span>Find Lands within <b>50 KM</b> radius</span>
-        </div>
-        <button id="geo-radius-btn" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-[11px] font-bold hover:bg-emerald-700">
-          Detect
+      <!-- 2. Nearby Location (50 KM Radius) & Select on Map Button -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="geo-radius-btn" class="flex items-center justify-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-xl text-xs font-bold hover:bg-emerald-100">
+          <i class="fa-solid fa-location-crosshairs text-emerald-600"></i>
+          <span>GPS 50KM Search</span>
+        </button>
+        <button id="open-map-picker-btn" class="flex items-center justify-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-800 p-2.5 rounded-xl text-xs font-bold hover:bg-blue-100">
+          <i class="fa-solid fa-map-location-dot text-blue-600"></i>
+          <span>Select on Map</span>
         </button>
       </div>
 
+      <!-- Active Location Status Indicator -->
+      <div id="active-geo-status" class="hidden flex items-center justify-between bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs">
+        <span id="geo-status-text"><i class="fa-solid fa-circle-check"></i> Showing lands within 50 KM</span>
+        <button id="clear-geo-btn" class="underline font-semibold text-[10px]">Clear GPS</button>
+      </div>
+
+      <!-- 3. Expandable Advanced Filter Drawer -->
       <div id="filter-drawer" class="hidden bg-white p-3.5 rounded-xl shadow-sm border space-y-3">
         <div class="flex justify-between items-center text-xs font-bold text-gray-700 border-b pb-2">
           <span>Filters</span>
@@ -157,10 +183,13 @@
         </button>
       </div>
 
+      <!-- Land Posts List Container -->
       <div id="posts-container" class="space-y-3">
-        </div>
+        <!-- Posts load dynamically -->
+      </div>
     </section>
 
+    <!-- Post Detail Section -->
     <section id="post-detail-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-4">
       <button id="back-to-home-btn" class="text-xs text-emerald-600 font-bold flex items-center gap-1">
         <i class="fa-solid fa-arrow-left"></i> Back to Home
@@ -171,37 +200,19 @@
       </button>
     </section>
 
-    <section id="chat-list-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
-      <h2 class="text-lg font-bold text-gray-800">Your Messages</h2>
-      <div id="user-chats-container" class="space-y-2"></div>
-    </section>
-
-    <section id="chat-view-section" class="hidden bg-white rounded-xl shadow-md flex flex-col h-[75vh]">
-      <div class="bg-emerald-600 text-white p-3 font-bold text-sm rounded-t-xl flex justify-between items-center">
-        <span id="chat-header">Chat Window</span>
-        <button onclick="showSection('chatList')" class="text-xs bg-emerald-700 px-2 py-1 rounded">Close</button>
-      </div>
-      <div id="chat-messages" class="flex-1 p-3 overflow-y-auto space-y-2 bg-gray-50 flex flex-col"></div>
-      <div class="p-2 border-t flex gap-2">
-        <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 p-2 border rounded-lg text-sm outline-none">
-        <button id="send-msg-btn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">
-          <i class="fa-solid fa-paper-plane"></i>
-        </button>
-      </div>
-    </section>
-
+    <!-- Add Post Section -->
     <section id="add-post-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
       <h2 class="text-lg font-bold text-gray-800">Post New Listing</h2>
       <form id="add-post-form" class="space-y-3">
         <input type="text" id="post-subject" placeholder="Title (e.g. 5 Vigha Land)" required class="w-full p-2 border rounded text-sm outline-none">
         <input type="number" id="post-price" placeholder="Price ₹" required class="w-full p-2 border rounded text-sm outline-none">
-        <input type="text" id="post-size" placeholder="Area Size (e.g. 2 Vigha / 100 Sq.Yard)" required class="w-full p-2 border rounded text-sm outline-none">
+        <input type="text" id="post-size" placeholder="Area Size (e.g. 2 Vigha)" required class="w-full p-2 border rounded text-sm outline-none">
         <input type="text" id="post-location" placeholder="Location / Village / Taluka" required class="w-full p-2 border rounded text-sm outline-none">
         
-        <button type="button" id="fetch-post-coords-btn" class="w-full bg-gray-100 text-emerald-700 border border-emerald-300 py-1.5 rounded text-xs font-semibold flex justify-center items-center gap-2">
-          <i class="fa-solid fa-location-pin"></i> Add GPS Location (For 50KM Radius Search)
+        <button type="button" id="fetch-post-coords-btn" class="w-full bg-emerald-50 text-emerald-700 border border-emerald-300 py-2 rounded text-xs font-semibold flex justify-center items-center gap-2">
+          <i class="fa-solid fa-location-dot"></i> Attach GPS Location for 50KM Filter
         </button>
-        <p id="coords-status" class="text-[10px] text-gray-400 text-center"></p>
+        <p id="coords-status" class="text-[11px] text-emerald-600 font-semibold text-center"></p>
 
         <textarea id="post-description" placeholder="Provide land details..." required class="w-full p-2 border rounded text-sm outline-none h-20"></textarea>
         <div>
@@ -214,20 +225,20 @@
       </form>
     </section>
 
+    <!-- My Ads Section -->
     <section id="my-ads-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
       <h2 class="text-lg font-bold text-gray-800">My Listings</h2>
       <div id="my-ads-container" class="space-y-2"></div>
     </section>
 
+    <!-- Account Section -->
     <section id="account-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4 text-center">
-      <img id="acc-img" src="https://via.placeholder.com/100" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-emerald-600 shadow">
+      <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto text-emerald-700 text-3xl font-bold">
+        <i class="fa-solid fa-user"></i>
+      </div>
       <div>
         <h3 id="acc-name" class="text-xl font-bold text-gray-800">User Name</h3>
         <p id="acc-phone" class="text-xs text-gray-500">+91 0000000000</p>
-      </div>
-      <div class="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded">
-        <p id="acc-location">Location: N/A</p>
-        <p id="acc-age">Age: N/A</p>
       </div>
       <button id="logout-btn" class="w-full bg-red-500 text-white py-2 rounded-lg font-semibold text-sm hover:bg-red-600">
         Logout
@@ -236,71 +247,54 @@
 
   </main>
 
+  <!-- MAP SELECTOR MODAL -->
+  <div id="map-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-xl overflow-hidden shadow-2xl flex flex-col h-[80vh]">
+      <div class="bg-emerald-600 text-white p-3 font-bold text-sm flex justify-between items-center">
+        <span>Click on Map to Select Location</span>
+        <button id="close-map-btn" class="text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="leaflet-map" class="flex-1 w-full"></div>
+      <div class="p-3 bg-gray-50 flex justify-between items-center border-t">
+        <span id="selected-map-coords" class="text-xs text-gray-600 font-mono">Click anywhere on map</span>
+        <button id="confirm-map-loc-btn" class="bg-emerald-600 text-white px-4 py-1.5 rounded text-xs font-bold">Apply 50KM Filter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERMS MODAL -->
   <div id="terms-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white p-5 rounded-xl max-w-md space-y-3 max-h-[80vh] overflow-y-auto">
+    <div class="bg-white p-5 rounded-xl max-w-md space-y-3">
       <h3 class="font-bold text-gray-800 text-lg border-b pb-1">Terms & Conditions</h3>
       <p class="text-xs text-gray-600 leading-relaxed">
-        1. Buyers must verify land documents independently.<br>
-        2. "Jamin Le Bech" platform is not responsible for any financial loss or fraudulent deal.<br>
-        3. All uploaded photos and land details must be authentic.
+        Buyers must verify land legal documents independently.
       </p>
       <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="w-full bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Close</button>
     </div>
   </div>
 
+  <!-- PRIVACY MODAL -->
   <div id="privacy-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white p-5 rounded-xl max-w-md space-y-3 max-h-[80vh] overflow-y-auto">
+    <div class="bg-white p-5 rounded-xl max-w-md space-y-3">
       <h3 class="font-bold text-gray-800 text-lg border-b pb-1">Privacy Policy</h3>
       <p class="text-xs text-gray-600 leading-relaxed">
-        We value your privacy. Your phone number is strictly used for authentication and connecting real buyers with sellers. We do not sell user data to third parties.
+        Your information is securely stored and never shared with third parties.
       </p>
       <button onclick="document.getElementById('privacy-modal').classList.add('hidden')" class="w-full bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Close</button>
     </div>
   </div>
 
-  <div id="disclaimer-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white p-5 rounded-xl max-w-sm space-y-3">
-      <h3 class="font-bold text-red-600 text-lg">Terms & Conditions</h3>
-      <p class="text-xs text-gray-600 leading-relaxed">
-        Please verify all land legal documents independently before making any purchase.
-      </p>
-      <div class="flex gap-2 pt-2">
-        <button id="decline-disclaimer-btn" class="w-1/2 bg-gray-200 py-2 rounded text-xs font-semibold">Decline</button>
-        <button id="accept-disclaimer-btn" class="w-1/2 bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Accept</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="payment-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white p-5 rounded-xl max-w-sm space-y-3 text-center">
-      <h3 class="font-bold text-gray-800 text-lg">Pay Listing Fee</h3>
-      <p class="text-xs text-gray-500">Pay ₹99 on the UPI ID below and enter the Transaction UTR number.</p>
-      <div class="bg-gray-100 p-2 rounded text-sm font-mono font-bold text-emerald-700">UPI: 9876543210@paytm</div>
-      <input type="text" id="payment-utr" placeholder="12-digit UTR / Reference No." class="w-full p-2 border rounded text-xs text-center outline-none">
-      <div class="flex gap-2 pt-2">
-        <button id="cancel-pay-btn" class="w-1/2 bg-gray-200 py-2 rounded text-xs font-semibold">Cancel</button>
-        <button id="confirm-pay-btn" class="w-1/2 bg-emerald-600 text-white py-2 rounded text-xs font-semibold">Submit</button>
-      </div>
-    </div>
-  </div>
-
-  <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around items-center px-2 py-1.5 z-50 shadow-lg">
+  <!-- FLOATING BOTTOM NAVIGATION -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around items-center px-2 py-1.5 z-40 shadow-lg">
     <button id="nav-home" class="flex flex-col items-center justify-center text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-house text-xl mb-0.5"></i>
       <span class="text-[11px] font-medium">Home</span>
     </button>
 
-    <button id="nav-chat" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
-      <i class="fa-solid fa-comment-dots text-xl mb-0.5"></i>
-      <span class="text-[11px] font-medium">Chat</span>
+    <button id="nav-add" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
+      <i class="fa-solid fa-plus-circle text-xl mb-0.5"></i>
+      <span class="text-[11px] font-medium">Post Ad</span>
     </button>
-
-    <div class="relative -top-5 flex items-center justify-center">
-      <div class="absolute w-14 h-14 bg-emerald-400 rounded-full animate-ping opacity-30"></div>
-      <button id="nav-add" class="relative bg-gradient-to-tr from-emerald-600 to-teal-400 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 border-4 border-white">
-        <i class="fa-solid fa-plus text-2xl font-bold"></i>
-      </button>
-    </div>
 
     <button id="nav-myads" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1">
       <i class="fa-solid fa-rectangle-ad text-xl mb-0.5"></i>
@@ -313,6 +307,7 @@
     </button>
   </nav>
 
+  <!-- App Script -->
   <script type="module" src="js/app.js"></script>
 
 </body>
