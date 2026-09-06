@@ -58,14 +58,40 @@ function showSection(sectionKey) {
   }
 }
 
-// Convert File to Base64
-function fileToBase64(file) {
+// Convert File to Base64 with Compression (Prevents >1MB Firestore Error)
+function compressAndConvertToBase64(file, maxWidth = 400) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
     reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.onerror = error => reject(error);
+    };
+    reader.onerror = error => reject(error);
   });
+}
+
+// Simple Base64 for Multiple Post Images
+function fileToBase64(file) {
+  return compressAndConvertToBase64(file, 600);
 }
 
 // ==========================================
@@ -158,15 +184,15 @@ async function checkUserProfile(user) {
   }
 }
 
-// Fixed Profile Save Event Listener
+// Fixed Profile Save Event Listener with Compression
 document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
-  const originalBtnText = submitBtn ? submitBtn.innerText : "Save";
+  const originalBtnText = submitBtn ? submitBtn.innerText : "Save Profile";
 
   if (submitBtn) {
-    submitBtn.innerText = "Saving Profile...";
+    submitBtn.innerText = "Compressing & Saving...";
     submitBtn.disabled = true;
   }
 
@@ -178,7 +204,7 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
 
     let picBase64 = "";
     if (picFile) {
-      picBase64 = await fileToBase64(picFile);
+      picBase64 = await compressAndConvertToBase64(picFile);
     }
 
     const userData = {
@@ -503,10 +529,11 @@ document.getElementById('logout-btn')?.addEventListener('click', () => {
   signOut(auth).then(() => location.reload());
 });
 
-// Navigation Handlers
+// Navigation Handlers (Includes Sell and Add Buttons)
 document.getElementById('nav-home')?.addEventListener('click', () => { showSection('home'); loadPosts(); });
 document.getElementById('nav-chat')?.addEventListener('click', loadUserChats);
 document.getElementById('nav-add')?.addEventListener('click', () => showSection('addPost'));
+document.getElementById('nav-sell')?.addEventListener('click', () => showSection('addPost')); // Added Sell Handler
 document.getElementById('nav-myads')?.addEventListener('click', loadMyAds);
 document.getElementById('nav-account')?.addEventListener('click', loadAccount);
 
