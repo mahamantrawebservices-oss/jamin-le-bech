@@ -1,259 +1,427 @@
 <!DOCTYPE html>
-<html lang="gu">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jamin Le Bech</title>
+  <title>Classified Ads App with Map & Filters</title>
   
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+  <!-- Leaflet CSS for Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-</head>
-<body class="bg-gray-100 font-sans pb-20 select-none">
 
-  <!-- Splash Screen -->
-  <div id="splash-screen" class="fixed inset-0 bg-emerald-700 z-50 flex flex-col items-center justify-center text-white">
-    <div class="text-center space-y-4">
-      <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto">
-        <i class="fa-solid fa-mountain-city text-4xl text-white"></i>
+  <style>
+    /* Basic Layout & Styling */
+    body { font-family: Arial, sans-serif; margin: 0; padding-bottom: 60px; background-color: #f4f4f9; }
+    header { background: #007bff; color: white; padding: 15px; text-align: center; font-size: 20px; font-weight: bold; }
+    .container { padding: 15px; }
+    
+    /* Navigation Bar */
+    .nav-bar { position: fixed; bottom: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; border-top: 1px solid #ccc; padding: 10px 0; z-index: 1000; }
+    .nav-btn { background: none; border: none; font-size: 15px; font-weight: bold; color: #555; cursor: pointer; }
+    .nav-btn.active { color: #007bff; }
+
+    /* Search & Filter Bar */
+    .filter-card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .filter-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .filter-row input, .filter-row select { flex: 1; min-width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    .btn-filter { background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-reset { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+    /* Map Styling */
+    #map { height: 250px; width: 100%; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ccc; }
+
+    /* View Toggle Buttons */
+    .view-toggle { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 10px; }
+    .view-btn { padding: 6px 12px; border: 1px solid #007bff; background: white; color: #007bff; border-radius: 4px; cursor: pointer; }
+    .view-btn.active { background: #007bff; color: white; }
+
+    /* Post Card */
+    .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .card h3 { margin: 0 0 5px 0; }
+    .card p { margin: 5px 0; color: #555; }
+    .price { font-weight: bold; color: #28a745; font-size: 18px; }
+    .location-tag { font-size: 12px; background: #e9ecef; padding: 3px 6px; border-radius: 4px; color: #495057; display: inline-block; margin-top: 5px; }
+
+    /* Action Buttons */
+    .btn-group { margin-top: 10px; display: flex; gap: 10px; }
+    .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-edit { background: #ffc107; color: black; }
+    .btn-delete { background: #dc3545; color: white; }
+    .btn-renew { background: #17a2b8; color: white; }
+    .btn-submit { background: #28a745; color: white; width: 100%; padding: 12px; font-size: 16px; }
+
+    /* Forms & Modal */
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px; box-sizing: border-box; }
+    
+    /* QR Code / Payment Section */
+    .qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 2000; }
+    .qr-content { background: white; padding: 20px; border-radius: 8px; text-align: center; max-width: 320px; width: 100%; }
+    .qr-code-img { width: 180px; height: 180px; margin: 15px 0; }
+  </style>
+</head>
+<body>
+
+  <header id="header-title">All Ads</header>
+
+  <div class="container" id="app-content">
+    <!-- Dynamic Content Will Be Loaded Here -->
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="nav-bar">
+    <button class="nav-btn active" id="tab-home" onclick="switchTab('home')">Home</button>
+    <button class="nav-btn" id="tab-create" onclick="switchTab('create')">Post Ad</button>
+    <button class="nav-btn" id="tab-my-posts" onclick="switchTab('my-posts')">My Posts</button>
+  </div>
+
+  <!-- Payment / QR Modal -->
+  <div class="qr-modal" id="payment-modal">
+    <div class="qr-content">
+      <h3>Complete Payment</h3>
+      <p>Scan QR or use UPI to pay posting fee: <strong>₹50</strong></p>
+      <img src="https://via.placeholder.com/180?text=UPI+QR+Code" alt="UPI QR Code" class="qr-code-img">
+      <p>UPI ID: <strong>yourupi@bank</strong></p>
+      
+      <div class="form-group" style="text-align: left;">
+        <label for="txn-id">Enter Transaction/UTR No.:</label>
+        <input type="text" id="txn-id" placeholder="e.g. 1234567890">
       </div>
-      <h1 class="text-3xl font-extrabold tracking-wide">Jamin Le Bech</h1>
-      <p class="text-sm text-emerald-100">Loading...</p>
+      
+      <button class="btn btn-submit" onclick="confirmPaymentAndPost()">Confirm Payment & Submit</button>
+      <button class="btn btn-delete" style="width: 100%; margin-top: 5px;" onclick="closePaymentModal()">Cancel</button>
     </div>
   </div>
 
-  <!-- SIDEBAR OVERLAY -->
-  <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-50 hidden"></div>
+  <!-- Leaflet JS for Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- SIDEBAR MENU DRAWER -->
-  <aside id="sidebar-menu" class="fixed top-0 left-0 w-64 h-full bg-white z-50 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col">
-    <div class="bg-emerald-600 text-white p-5 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <!-- Sidebar Profile Photo -->
-        <div class="w-12 h-12 rounded-full overflow-hidden border-2 border-white bg-emerald-800 flex items-center justify-center">
-          <img id="sidebar-avatar" src="" alt="Profile" class="w-full h-full object-cover hidden">
-          <i id="sidebar-avatar-icon" class="fa-solid fa-user text-xl text-white"></i>
-        </div>
-        <div>
-          <h3 id="sidebar-user-name" class="font-bold text-sm">Guest User</h3>
-          <p id="sidebar-user-phone" class="text-xs opacity-80">+91 Mobile</p>
-        </div>
-      </div>
-      <button id="close-sidebar-btn" class="text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    
-    <nav class="flex-1 p-4 space-y-2 text-gray-700 font-medium text-sm">
-      <button id="menu-home" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 text-left">
-        <i class="fa-solid fa-house w-5"></i> Home
-      </button>
-      <button id="menu-profile" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 text-left">
-        <i class="fa-solid fa-id-card w-5"></i> Profile Edit
-      </button>
-      <button id="menu-terms" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 text-left">
-        <i class="fa-solid fa-file-contract w-5"></i> Terms & Conditions
-      </button>
-      <button id="menu-privacy" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 text-left">
-        <i class="fa-solid fa-shield-halved w-5"></i> Privacy Policy
-      </button>
-      <button id="menu-about" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 text-left">
-        <i class="fa-solid fa-circle-info w-5"></i> About Us
-      </button>
-      <button id="menu-share" class="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-600 text-left">
-        <i class="fa-solid fa-share-nodes w-5"></i> Share App
-      </button>
-    </nav>
-  </aside>
+  <script>
+    // Sample Posts Data with Location (Lat, Lng)
+    let myPosts = [
+      { id: 1, title: 'Used Smartphone', price: 8000, category: 'Electronics', location: 'Ahmedabad', lat: 23.0225, lng: 72.5714, description: 'Good condition, 6GB RAM', date: '2026-03-01' },
+      { id: 2, title: 'Mountain Bike', price: 4500, category: 'Sports', location: 'Gandhinagar', lat: 23.2156, lng: 72.6369, description: '21 gears, rarely used', date: '2026-03-03' },
+      { id: 3, title: 'Wooden Study Table', price: 2500, category: 'Furniture', location: 'Ahmedabad', lat: 23.0300, lng: 72.5800, description: 'Solid wood table', date: '2026-03-05' }
+    ];
 
-  <!-- App Header -->
-  <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-40 flex justify-between items-center">
-    <button id="open-sidebar-btn" class="text-xl p-1">
-      <i class="fa-solid fa-bars"></i>
-    </button>
-    <h1 class="text-xl font-bold flex items-center gap-2">
-      <i class="fa-solid fa-mountain-city"></i> Jamin Le Bech
-    </h1>
-    <button id="app-refresh-btn" class="text-xl p-1">
-      <i class="fa-solid fa-rotate-right"></i>
-    </button>
-  </header>
+    let pendingPostData = null;
+    let mapInstance = null;
+    let markersGroup = null;
+    let currentViewMode = 'list'; // 'list' or 'map'
 
-  <!-- Main Container -->
-  <main class="p-4 max-w-md mx-auto">
+    // Active Navigation Tabs
+    function switchTab(tab) {
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
 
-    <!-- Auth Section -->
-    <section id="auth-section" class="bg-white p-6 rounded-xl shadow-md space-y-4 text-center mt-10">
-      <h2 class="text-2xl font-bold text-gray-800">Login / Sign In</h2>
-      <div id="phone-input-group" class="space-y-3">
-        <div class="flex items-center border rounded-lg overflow-hidden">
-          <span class="bg-gray-100 px-3 py-2 text-gray-600 font-semibold">+91</span>
-          <input type="tel" id="phone-number" placeholder="Enter mobile number" class="w-full p-2 outline-none" maxlength="10">
-        </div>
-        <div id="recaptcha-container"></div>
-        <button id="send-otp-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold">Send OTP</button>
-      </div>
-
-      <div id="otp-input-group" class="hidden space-y-3">
-        <input type="number" id="otp-code" placeholder="Enter OTP" class="w-full p-2.5 border rounded-lg text-center tracking-widest text-lg outline-none">
-        <button id="verify-otp-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold">Verify & Login</button>
-      </div>
-    </section>
-
-    <!-- HOME SECTION -->
-    <section id="home-section" class="hidden space-y-3">
-      <!-- Search Bar -->
-      <div class="relative flex items-center">
-        <i class="fa-solid fa-magnifying-glass absolute left-3 text-gray-400 text-sm"></i>
-        <input type="text" id="search-location" placeholder="Search location or title..." class="w-full pl-9 pr-3 py-2.5 bg-white border rounded-xl text-xs outline-none shadow-sm">
-      </div>
-      <!-- Posts List Container -->
-      <div id="posts-container" class="space-y-3"></div>
-    </section>
-
-    <!-- Post Detail Section -->
-    <section id="post-detail-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-4">
-      <button id="back-to-home-btn" class="text-xs text-emerald-600 font-bold flex items-center gap-1">
-        <i class="fa-solid fa-arrow-left"></i> Back to Home
-      </button>
-      <div id="post-detail-content"></div>
-    </section>
-
-    <!-- Add Post Section (WITH IMAGE UPLOAD) -->
-    <section id="add-post-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
-      <h2 class="text-lg font-bold text-gray-800">Post New Listing</h2>
-      <form id="add-post-form" class="space-y-3">
-        <input type="text" id="post-subject" placeholder="Title (e.g. 5 Vigha Land)" required class="w-full p-2 border rounded text-sm outline-none">
-        <input type="number" id="post-price" placeholder="Price ₹" required class="w-full p-2 border rounded text-sm outline-none">
-        <input type="text" id="post-size" placeholder="Area Size (e.g. 2 Vigha)" required class="w-full p-2 border rounded text-sm outline-none">
-        <input type="text" id="post-location" placeholder="Location / Village" required class="w-full p-2 border rounded text-sm outline-none">
-        
-        <!-- Post Image Upload Input -->
-        <div>
-          <label class="text-xs text-gray-600 font-semibold block mb-1">Land / Property Photo:</label>
-          <input type="file" id="post-image-input" accept="image/*" class="w-full text-xs p-1 border rounded">
-          <img id="post-image-preview" src="" class="mt-2 w-full h-40 object-cover rounded hidden">
-        </div>
-
-        <textarea id="post-description" placeholder="Land details..." required class="w-full p-2 border rounded text-sm outline-none h-20"></textarea>
-        
-        <button type="submit" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold">
-          Post Listing
-        </button>
-      </form>
-    </section>
-
-    <!-- CHAT SECTION -->
-    <section id="chat-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
-      <h2 class="text-lg font-bold text-gray-800 border-b pb-2"><i class="fa-solid fa-comments text-emerald-600"></i> Messages & Chats</h2>
-      <div id="chat-list" class="space-y-2">
-        <p class="text-center text-xs text-gray-400 py-6">હજુ સુધી કોઈ મેસેજ નથી.</p>
-      </div>
-    </section>
-
-    <!-- ACCOUNT / PROFILE EDIT SECTION -->
-    <section id="account-section" class="hidden bg-white p-5 rounded-xl shadow-md space-y-4">
-      <h2 class="text-lg font-bold text-gray-800 text-center border-b pb-2">User Profile</h2>
+      const content = document.getElementById('app-content');
+      const title = document.getElementById('header-title');
       
-      <!-- Profile Photo Upload -->
-      <div class="flex flex-col items-center gap-2">
-        <div class="relative w-24 h-24 rounded-full overflow-hidden bg-gray-200 border-2 border-emerald-600 shadow-sm flex items-center justify-center">
-          <img id="profile-preview-img" src="" class="w-full h-full object-cover hidden">
-          <i id="profile-preview-icon" class="fa-solid fa-user text-4xl text-gray-400"></i>
+      if (tab === 'home') {
+        title.innerText = 'All Ads';
+        renderHome(content);
+      } else if (tab === 'create') {
+        title.innerText = 'Create New Post';
+        renderCreatePost(content);
+      } else if (tab === 'my-posts') {
+        title.innerText = 'My Posts';
+        renderMyPosts(content);
+      }
+    }
+
+    // Render Home Page with Search, Filters, and Map/List Switch
+    function renderHome(container) {
+      container.innerHTML = `
+        <div class="filter-card">
+          <div class="filter-row">
+            <input type="text" id="filter-search" placeholder="Search keywords...">
+            <select id="filter-category">
+              <option value="">All Categories</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Furniture">Furniture</option>
+              <option value="Sports">Sports</option>
+              <option value="Vehicles">Vehicles</option>
+            </select>
+          </div>
+          <div class="filter-row">
+            <input type="number" id="filter-min-price" placeholder="Min Price (₹)">
+            <input type="number" id="filter-max-price" placeholder="Max Price (₹)">
+            <select id="filter-location">
+              <option value="">All Locations</option>
+              <option value="Ahmedabad">Ahmedabad</option>
+              <option value="Gandhinagar">Gandhinagar</option>
+            </select>
+          </div>
+          <div class="filter-row">
+            <button class="btn-filter" onclick="applyFilters()">Apply Filters</button>
+            <button class="btn-reset" onclick="resetFilters()">Reset</button>
+          </div>
         </div>
-        <label class="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-semibold border border-emerald-200 cursor-pointer">
-          <i class="fa-solid fa-camera"></i> Select Profile Photo
-          <input type="file" id="profile-photo-input" accept="image/*" class="hidden">
-        </label>
-      </div>
 
-      <form id="profile-form" class="space-y-3">
-        <div>
-          <label class="text-xs text-gray-500 font-semibold">Full Name *</label>
-          <input type="text" id="user-full-name" placeholder="તમારું પૂરું નામ લખો" required class="w-full p-2 border rounded text-xs outline-none">
+        <div class="view-toggle">
+          <button class="view-btn ${currentViewMode === 'list' ? 'active' : ''}" onclick="toggleView('list')">List View</button>
+          <button class="view-btn ${currentViewMode === 'map' ? 'active' : ''}" onclick="toggleView('map')">Map View</button>
         </div>
-        <div>
-          <label class="text-xs text-gray-500 font-semibold">City / Village *</label>
-          <input type="text" id="user-city" placeholder="ગામ / શહેરનું નામ" required class="w-full p-2 border rounded text-xs outline-none">
+
+        <div id="map-container" style="display: ${currentViewMode === 'map' ? 'block' : 'none'};">
+          <div id="map"></div>
         </div>
-        <div>
-          <label class="text-xs text-gray-500 font-semibold">Mobile Number</label>
-          <input type="text" id="user-phone-display" disabled class="w-full p-2 bg-gray-100 border rounded text-xs text-gray-500">
+
+        <div id="posts-list-container"></div>
+      `;
+
+      applyFilters();
+    }
+
+    // Apply Filter Logic
+    function applyFilters() {
+      const search = document.getElementById('filter-search')?.value.toLowerCase() || '';
+      const category = document.getElementById('filter-category')?.value || '';
+      const minPrice = parseFloat(document.getElementById('filter-min-price')?.value) || 0;
+      const maxPrice = parseFloat(document.getElementById('filter-max-price')?.value) || Infinity;
+      const location = document.getElementById('filter-location')?.value || '';
+
+      const filtered = myPosts.filter(post => {
+        const matchesSearch = post.title.toLowerCase().includes(search) || post.description.toLowerCase().includes(search);
+        const matchesCategory = category === '' || post.category === category;
+        const matchesPrice = post.price >= minPrice && post.price <= maxPrice;
+        const matchesLocation = location === '' || post.location === location;
+
+        return matchesSearch && matchesCategory && matchesPrice && matchesLocation;
+      });
+
+      renderPostsList(filtered);
+
+      if (currentViewMode === 'map') {
+        renderMap(filtered);
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-category').value = '';
+      document.getElementById('filter-min-price').value = '';
+      document.getElementById('filter-max-price').value = '';
+      document.getElementById('filter-location').value = '';
+      applyFilters();
+    }
+
+    // Toggle Between Map & List View
+    function toggleView(mode) {
+      currentViewMode = mode;
+      document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+      
+      if (mode === 'map') {
+        document.getElementById('map-container').style.display = 'block';
+        applyFilters();
+      } else {
+        document.getElementById('map-container').style.display = 'none';
+        applyFilters();
+      }
+    }
+
+    // Render List View
+    function renderPostsList(posts) {
+      const container = document.getElementById('posts-list-container');
+      if (!container) return;
+
+      if (posts.length === 0) {
+        container.innerHTML = `<p>No posts found matching your criteria.</p>`;
+        return;
+      }
+
+      container.innerHTML = posts.map(post => `
+        <div class="card">
+          <h3>${post.title}</h3>
+          <p class="price">₹${post.price}</p>
+          <p>${post.description}</p>
+          <span class="location-tag">📍 ${post.location}</span>
+          <span class="location-tag">📂 ${post.category}</span>
         </div>
-        
-        <button type="submit" id="save-profile-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold text-xs">
-          Save Profile Details
-        </button>
-      </form>
+      `).join('');
+    }
 
-      <button id="logout-btn" class="w-full bg-red-50 text-red-600 py-2 rounded-lg font-semibold text-xs border border-red-200 mt-4">
-        Logout
-      </button>
-    </section>
+    // Render Map View using Leaflet OpenStreetMap
+    function renderMap(posts) {
+      if (!mapInstance) {
+        mapInstance = L.map('map').setView([23.0225, 72.5714], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(mapInstance);
+        markersGroup = L.layerGroup().addTo(mapInstance);
+      }
 
-    <!-- PAGE 1: TERMS & CONDITIONS PAGE -->
-    <section id="terms-page-section" class="hidden bg-white p-5 rounded-xl shadow-md space-y-3">
-      <h2 class="text-lg font-bold text-gray-800 border-b pb-2"><i class="fa-solid fa-file-contract text-emerald-600"></i> Terms & Conditions</h2>
-      <div id="terms-content" class="text-xs text-gray-600 space-y-2 leading-relaxed">
-        <!-- અહી તમે તમારું લખાણ (Text Content) ઉમેરી શકો છો -->
-        <p>1. અહી તમારી એપ્લિકેશનના નિયમો અને શરતો લખી શકો છો.</p>
-        <p>2. તમામ જમીન/મકાનની ખરીદી કે વેચાણની જવાબદારી ઉપયોગકર્તાની રહેશે.</p>
-      </div>
-      <button onclick="window.showSection('home')" class="mt-4 text-xs bg-emerald-600 text-white px-4 py-2 rounded">Back to Home</button>
-    </section>
+      markersGroup.clearLayers();
 
-    <!-- PAGE 2: PRIVACY POLICY PAGE -->
-    <section id="privacy-page-section" class="hidden bg-white p-5 rounded-xl shadow-md space-y-3">
-      <h2 class="text-lg font-bold text-gray-800 border-b pb-2"><i class="fa-solid fa-shield-halved text-emerald-600"></i> Privacy Policy</h2>
-      <div id="privacy-content" class="text-xs text-gray-600 space-y-2 leading-relaxed">
-        <!-- અહી તમે તમારું લખાણ (Text Content) ઉમેરી શકો છો -->
-        <p>1. તમારી ગોપનીયતા અમારા માટે મહત્વપૂર્ણ છે.</p>
-        <p>2. તમારો મોબાઈલ નંબર અન્ય બિનઅધિકૃત વ્યક્તિઓને શેર કરવામાં આવશે નહી.</p>
-      </div>
-      <button onclick="window.showSection('home')" class="mt-4 text-xs bg-emerald-600 text-white px-4 py-2 rounded">Back to Home</button>
-    </section>
+      if (posts.length > 0) {
+        const bounds = [];
+        posts.forEach(post => {
+          if (post.lat && post.lng) {
+            const marker = L.marker([post.lat, post.lng])
+              .bindPopup(`<b>${post.title}</b><br>₹${post.price}<br>${post.location}`);
+            markersGroup.addLayer(marker);
+            bounds.push([post.lat, post.lng]);
+          }
+        });
 
-    <!-- PAGE 3: ABOUT US PAGE -->
-    <section id="about-page-section" class="hidden bg-white p-5 rounded-xl shadow-md space-y-3">
-      <h2 class="text-lg font-bold text-gray-800 border-b pb-2"><i class="fa-solid fa-circle-info text-emerald-600"></i> About Us</h2>
-      <div id="about-content" class="text-xs text-gray-600 space-y-2 leading-relaxed">
-        <!-- અહી તમે તમારું લખાણ (Text Content) ઉમેરી શકો છો -->
-        <p>Jamin Le Bech એ જમીન અને પ્રોપર્ટી લે-વેચ માટેનું ડિજિટલ પ્લેટફોર્મ છે.</p>
-      </div>
-      <button onclick="window.showSection('home')" class="mt-4 text-xs bg-emerald-600 text-white px-4 py-2 rounded">Back to Home</button>
-    </section>
+        if (bounds.length > 0) {
+          mapInstance.fitBounds(bounds, { padding: [20, 20] });
+        }
+      }
 
-  </main>
+      setTimeout(() => { mapInstance.invalidateSize(); }, 200);
+    }
 
-  <!-- FLOATING BOTTOM NAVIGATION -->
-  <nav id="bottom-nav" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around items-center px-2 py-1 z-40 shadow-lg">
-    <button id="nav-home" class="flex flex-col items-center text-emerald-600 w-14 py-1">
-      <i class="fa-solid fa-house text-lg mb-0.5"></i>
-      <span class="text-[10px] font-medium">Home</span>
-    </button>
-    
-    <button id="nav-chat" class="flex flex-col items-center text-gray-500 hover:text-emerald-600 w-14 py-1">
-      <i class="fa-solid fa-comments text-lg mb-0.5"></i>
-      <span class="text-[10px] font-medium">Chat</span>
-    </button>
+    // Form to Create New Post
+    function renderCreatePost(container) {
+      container.innerHTML = `
+        <div class="card">
+          <div class="form-group">
+            <label>Item Title</label>
+            <input type="text" id="post-title" placeholder="Enter product title">
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="post-category">
+              <option value="Electronics">Electronics</option>
+              <option value="Furniture">Furniture</option>
+              <option value="Sports">Sports</option>
+              <option value="Vehicles">Vehicles</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Price (₹)</label>
+            <input type="number" id="post-price" placeholder="Enter price">
+          </div>
+          <div class="form-group">
+            <label>City / Location</label>
+            <input type="text" id="post-location" placeholder="e.g. Ahmedabad">
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="post-desc" rows="4" placeholder="Enter details"></textarea>
+          </div>
+          <button class="btn btn-submit" onclick="initiatePayment()">Proceed to Payment</button>
+        </div>
+      `;
+    }
 
-    <div class="relative -top-5">
-      <button id="nav-add" class="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg border-4 border-white hover:bg-emerald-700 transition active:scale-95">
-        <i class="fa-solid fa-plus text-xl"></i>
-      </button>
-    </div>
+    // Trigger Payment Modal
+    function initiatePayment() {
+      const title = document.getElementById('post-title').value.trim();
+      const price = parseFloat(document.getElementById('post-price').value);
+      const category = document.getElementById('post-category').value;
+      const location = document.getElementById('post-location').value.trim();
+      const description = document.getElementById('post-desc').value.trim();
 
-    <button id="nav-terms" class="flex flex-col items-center text-gray-500 hover:text-emerald-600 w-14 py-1">
-      <i class="fa-solid fa-file-contract text-lg mb-0.5"></i>
-      <span class="text-[10px] font-medium">Terms</span>
-    </button>
+      if (!title || isNaN(price) || !location || !description) {
+        alert("Please fill in all required fields before proceeding to payment.");
+        return;
+      }
 
-    <button id="nav-account" class="flex flex-col items-center text-gray-500 hover:text-emerald-600 w-14 py-1">
-      <i class="fa-solid fa-user text-lg mb-0.5"></i>
-      <span class="text-[10px] font-medium">Profile</span>
-    </button>
-  </nav>
+      pendingPostData = {
+        id: Date.now(),
+        title: title,
+        price: price,
+        category: category,
+        location: location,
+        lat: 23.0225 + (Math.random() - 0.5) * 0.1, // Demo Default GPS coords near Ahmedabad
+        lng: 72.5714 + (Math.random() - 0.5) * 0.1,
+        description: description,
+        date: new Date().toISOString().split('T')[0]
+      };
 
-  <script type="module" src="js/app.js"></script>
+      document.getElementById('payment-modal').style.display = 'flex';
+    }
+
+    function closePaymentModal() {
+      document.getElementById('payment-modal').style.display = 'none';
+      pendingPostData = null;
+    }
+
+    // Confirm Payment
+    function confirmPaymentAndPost() {
+      const txnId = document.getElementById('txn-id').value.trim();
+      
+      if (!txnId) {
+        alert("Please enter the payment Transaction / UTR ID to verify.");
+        return;
+      }
+
+      myPosts.push(pendingPostData);
+      alert("Payment submitted successfully! Your post is now live.");
+      
+      closePaymentModal();
+      document.getElementById('txn-id').value = '';
+      switchTab('my-posts');
+    }
+
+    // Render "My Posts" View
+    function renderMyPosts(container) {
+      if (myPosts.length === 0) {
+        container.innerHTML = `<p>You have not posted any items yet.</p>`;
+        return;
+      }
+
+      container.innerHTML = myPosts.map(post => `
+        <div class="card" id="post-card-${post.id}">
+          <h3>${post.title}</h3>
+          <p class="price">₹${post.price}</p>
+          <p>${post.description}</p>
+          <span class="location-tag">📍 ${post.location}</span>
+          <span class="location-tag">📂 ${post.category}</span>
+          <p><small>Posted on: ${post.date}</small></p>
+          <div class="btn-group">
+            <button class="btn btn-edit" onclick="editPost(${post.id})">Edit</button>
+            <button class="btn btn-renew" onclick="renewPost(${post.id})">Renew</button>
+            <button class="btn btn-delete" onclick="deletePost(${post.id})">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Edit Post
+    function editPost(id) {
+      const post = myPosts.find(p => p.id === id);
+      if (!post) return;
+
+      const newTitle = prompt("Edit Title:", post.title);
+      const newPrice = prompt("Edit Price (₹):", post.price);
+      const newDesc = prompt("Edit Description:", post.description);
+
+      if (newTitle && newPrice && newDesc) {
+        post.title = newTitle;
+        post.price = parseFloat(newPrice);
+        post.description = newDesc;
+        alert("Your post has been updated successfully.");
+        switchTab('my-posts');
+      }
+    }
+
+    // Renew Post
+    function renewPost(id) {
+      const post = myPosts.find(p => p.id === id);
+      if (!post) return;
+
+      const confirmRenew = confirm("Renewing this post requires a fee payment. Proceed to payment?");
+      if (confirmRenew) {
+        pendingPostData = { ...post, date: new Date().toISOString().split('T')[0] };
+        document.getElementById('payment-modal').style.display = 'flex';
+      }
+    }
+
+    // Delete Post
+    function deletePost(id) {
+      const confirmDelete = confirm("Are you sure you want to delete this post?");
+      if (confirmDelete) {
+        myPosts = myPosts.filter(p => p.id !== id);
+        alert("Post deleted successfully.");
+        switchTab('my-posts');
+      }
+    }
+
+    // Initial Load
+    switchTab('home');
+  </script>
 </body>
 </html>
