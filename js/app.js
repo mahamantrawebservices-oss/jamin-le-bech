@@ -58,7 +58,7 @@ function showSection(sectionKey) {
   }
 }
 
-// Convert File to Base64 with Compression (Prevents >1MB Firestore Error)
+// Image Compression (Keeps Image < 100KB to prevent Firestore >1MB errors)
 function compressAndConvertToBase64(file, maxWidth = 400) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -89,13 +89,12 @@ function compressAndConvertToBase64(file, maxWidth = 400) {
   });
 }
 
-// Simple Base64 for Multiple Post Images
 function fileToBase64(file) {
   return compressAndConvertToBase64(file, 600);
 }
 
 // ==========================================
-// 3. SPLASH SCREEN (ANIMATION & REMOVAL)
+// 3. SPLASH SCREEN
 // ==========================================
 function startSplashScreenAnimation(callback) {
   const progressBar = document.getElementById('splash-progress');
@@ -111,7 +110,7 @@ function startSplashScreenAnimation(callback) {
       if (splashScreen) {
         splashScreen.classList.add('opacity-0');
         setTimeout(() => {
-          splashScreen.style.display = 'none'; // Completely unblock UI overlay
+          splashScreen.style.display = 'none';
           callback();
         }, 300);
       } else {
@@ -184,7 +183,7 @@ async function checkUserProfile(user) {
   }
 }
 
-// Fixed Profile Save Event Listener with Compression
+// Profile Save Event Listener
 document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -217,13 +216,11 @@ document.getElementById('profile-form')?.addEventListener('submit', async (e) =>
       createdAt: serverTimestamp()
     };
 
-    // Save to Firestore Database
     await setDoc(doc(db, "users", currentUser.uid), userData);
 
     currentUserData = userData;
     alert("Profile saved successfully!");
 
-    // Navigate to Home section
     showSection('home');
     loadPosts();
   } catch (err) {
@@ -261,7 +258,6 @@ async function loadPosts() {
     snapshot.forEach(docSnap => {
       const post = { id: docSnap.id, ...docSnap.data() };
 
-      // Filter Logic
       if (locationFilter && !post.location?.toLowerCase().includes(locationFilter)) return;
       if (maxPriceFilter && Number(post.price) > maxPriceFilter) return;
 
@@ -443,7 +439,6 @@ document.getElementById('add-post-form')?.addEventListener('submit', async (e) =
     createdAt: serverTimestamp()
   };
 
-  // Open Disclaimer Modal
   document.getElementById('disclaimer-modal')?.classList.remove('hidden');
 });
 
@@ -529,16 +524,15 @@ document.getElementById('logout-btn')?.addEventListener('click', () => {
   signOut(auth).then(() => location.reload());
 });
 
-// Navigation Handlers (Includes Sell and Add Buttons)
+// Bottom Navigation Event Listeners
 document.getElementById('nav-home')?.addEventListener('click', () => { showSection('home'); loadPosts(); });
 document.getElementById('nav-chat')?.addEventListener('click', loadUserChats);
-document.getElementById('nav-add')?.addEventListener('click', () => showSection('addPost'));
-document.getElementById('nav-sell')?.addEventListener('click', () => showSection('addPost')); // Added Sell Handler
+document.getElementById('nav-add')?.addEventListener('click', () => showSection('addPost')); // Attractive (+) Button Event
 document.getElementById('nav-myads')?.addEventListener('click', loadMyAds);
 document.getElementById('nav-account')?.addEventListener('click', loadAccount);
 
 // ==========================================
-// 10. APP INITIALIZATION (WITH SPLASH BAR)
+// 10. APP INITIALIZATION
 // ==========================================
 window.addEventListener('DOMContentLoaded', () => {
   startSplashScreenAnimation(() => {
