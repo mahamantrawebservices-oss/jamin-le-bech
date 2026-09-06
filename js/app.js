@@ -6,9 +6,6 @@ import {
   getFirestore, doc, setDoc, getDoc, collection, addDoc, query, where, getDocs, onSnapshot, orderBy, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// ==========================================
-// 1. FIREBASE CONFIGURATION
-// ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyA3g9nTWJ7Gsc5K8dpa06_Gs-8qxuKBC4g",
   authDomain: "jamin-le-bech.firebaseapp.com",
@@ -30,8 +27,9 @@ let confirmationResult = null;
 let selectedPostForDetail = null;
 let activeChatId = null;
 let pendingPostData = null;
+let currentPostCoords = null;
+let activeUserGeoLocation = null;
 
-// UI Elements
 const sections = {
   auth: document.getElementById('auth-section'),
   profileSetup: document.getElementById('profile-setup-section'),
@@ -44,9 +42,6 @@ const sections = {
   account: document.getElementById('account-section')
 };
 
-// ==========================================
-// 2. HELPER FUNCTIONS
-// ==========================================
 function hideAllSections() {
   Object.values(sections).forEach(s => s?.classList.add('hidden'));
 }
@@ -58,7 +53,19 @@ function showSection(sectionKey) {
   }
 }
 
-// Image Compression (Keeps Image < 100KB to prevent Firestore >1MB errors)
+// 50 KM Haversine Distance Calculator
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+  return R * c; // Distance in km
+}
+
+// Compress Image (<100KB)
 function compressAndConvertToBase64(file, maxWidth = 400) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -93,9 +100,7 @@ function fileToBase64(file) {
   return compressAndConvertToBase64(file, 600);
 }
 
-// ==========================================
-// 3. SPLASH SCREEN
-// ==========================================
+// Splash Screen
 function startSplashScreenAnimation(callback) {
   const progressBar = document.getElementById('splash-progress');
   const splashScreen = document.getElementById('splash-screen');
@@ -120,9 +125,35 @@ function startSplashScreenAnimation(callback) {
   }, 40);
 }
 
-// ==========================================
-// 4. AUTH & RECAPTCHA
-// ==========================================
+// Sidebar Navigation Control
+const sidebar = document.getElementById('sidebar-menu');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+document.getElementById('open-sidebar-btn')?.addEventListener('click', () => {
+  sidebar.classList.remove('-translate-x-full');
+  sidebarOverlay.classList.remove('hidden');
+});
+
+sidebarOverlay?.addEventListener('click', closeSidebar);
+
+function closeSidebar() {
+  sidebar.classList.add('-translate-x-full');
+  sidebarOverlay.classList.add('hidden');
+}
+
+document.getElementById('menu-home')?.addEventListener('click', () => { closeSidebar(); showSection('home'); loadPosts(); });
+document.getElementById('menu-terms')?.addEventListener('click', () => { closeSidebar(); document.getElementById('terms-modal').classList.remove('hidden'); });
+document.getElementById('menu-privacy')?.addEventListener('click', () => { closeSidebar(); document.getElementById('privacy-modal').classList.remove('hidden'); });
+document.getElementById('menu-share')?.addEventListener('click', () => {
+  closeSidebar();
+  if (navigator.share) {
+    navigator.share({ title: 'Jamin Le Bech', text: 'Buy and Sell Land easily!', url: window.location.href });
+  } else {
+    alert("Share link copied to clipboard!");
+  }
+});
+
+// Auth & OTP
 function setupRecaptcha() {
   if (!window.recaptchaVerifier) {
     window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
@@ -133,14 +164,10 @@ function setupRecaptcha() {
 }
 
 document.getElementById('send-otp-btn')?.addEventListener('click', async () => {
-  let phone = document.getElementById('phone-number').value.trim();
-  phone = phone.replace(/[\s\-\(\)]/g, "");
-
+  let phone = document.getElementById('phone-number').value.trim().replace(/[\s\-\(\)]/g, "");
   if (!phone.startsWith("+")) phone = "+91" + phone;
 
-  if (phone.length !== 13) {
-    return alert("Please enter a valid 10-digit mobile number");
-  }
+  if (phone.length !== 13) return alert("Please enter a valid 10-digit mobile number");
 
   try {
     setupRecaptcha();
@@ -149,7 +176,6 @@ document.getElementById('send-otp-btn')?.addEventListener('click', async () => {
     document.getElementById('otp-input-group')?.classList.remove('hidden');
     alert("OTP sent successfully!");
   } catch (error) {
-    console.error("OTP Error:", error);
     alert("Error sending OTP: " + error.message);
   }
 });
@@ -172,77 +198,54 @@ async function checkUserProfile(user) {
     const userDoc = await getDoc(doc(db, "users", user.uid));
     if (userDoc.exists()) {
       currentUserData = userDoc.data();
+      document.getElementById('sidebar-user-name').innerText = currentUserData.name || "User";
+      document.getElementById('sidebar-user-phone').innerText = currentUser.phoneNumber || "";
       showSection('home');
       loadPosts();
     } else {
       showSection('profileSetup');
     }
   } catch (err) {
-    console.error("Firestore user fetch error:", err);
     showSection('profileSetup');
   }
 }
 
-// Profile Save Event Listener
-document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
+// Toggle & Reset Filter
+document.getElementById('toggle-filter-btn')?.addEventListener('click', () => {
+  document.getElementById('filter-drawer').classList.toggle('hidden');
+});
 
-  const submitBtn = e.target.querySelector('button[type="submit"]');
-  const originalBtnText = submitBtn ? submitBtn.innerText : "Save Profile";
+document.getElementById('clear-filter-btn')?.addEventListener('click', () => {
+  document.getElementById('search-location').value = "";
+  document.getElementById('filter-max-price').value = "";
+  document.getElementById('filter-size').value = "";
+  activeUserGeoLocation = null;
+  loadPosts();
+});
 
-  if (submitBtn) {
-    submitBtn.innerText = "Compressing & Saving...";
-    submitBtn.disabled = true;
-  }
-
-  try {
-    const name = document.getElementById('prof-name').value.trim();
-    const location = document.getElementById('prof-location').value.trim();
-    const age = document.getElementById('prof-age').value.trim();
-    const picFile = document.getElementById('prof-pic')?.files[0];
-
-    let picBase64 = "";
-    if (picFile) {
-      picBase64 = await compressAndConvertToBase64(picFile);
-    }
-
-    const userData = {
-      uid: currentUser.uid,
-      phone: currentUser.phoneNumber || "",
-      name: name,
-      location: location,
-      age: age,
-      photoURL: picBase64,
-      createdAt: serverTimestamp()
-    };
-
-    await setDoc(doc(db, "users", currentUser.uid), userData);
-
-    currentUserData = userData;
-    alert("Profile saved successfully!");
-
-    showSection('home');
-    loadPosts();
-  } catch (err) {
-    console.error("Profile save error:", err);
-    alert("Failed to save profile: " + err.message);
-  } finally {
-    if (submitBtn) {
-      submitBtn.innerText = originalBtnText;
-      submitBtn.disabled = false;
-    }
+// Geolocation Detect for 50KM Radius Search
+document.getElementById('geo-radius-btn')?.addEventListener('click', () => {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(position => {
+      activeUserGeoLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      alert("Location detected! Showing listings within 50 KM radius.");
+      loadPosts();
+    }, () => {
+      alert("Unable to fetch location. Please allow GPS access.");
+    });
   }
 });
 
-// ==========================================
-// 5. POSTS & FILTERS
-// ==========================================
+// Load Posts with Spelling-Friendly Search and Filters
 async function loadPosts() {
   const container = document.getElementById('posts-container');
   if (!container) return;
-  container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading ads...</p>";
+  container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading land listings...</p>";
 
-  const locationFilter = document.getElementById('filter-location')?.value.toLowerCase().trim() || "";
+  const searchText = document.getElementById('search-location')?.value.toLowerCase().trim() || "";
   const maxPriceFilter = Number(document.getElementById('filter-max-price')?.value) || 0;
 
   try {
@@ -258,13 +261,28 @@ async function loadPosts() {
     snapshot.forEach(docSnap => {
       const post = { id: docSnap.id, ...docSnap.data() };
 
-      if (locationFilter && !post.location?.toLowerCase().includes(locationFilter)) return;
+      // Partial / Fuzzy match for spelling mistakes
+      if (searchText) {
+        const postLoc = (post.location || "").toLowerCase();
+        const postTitle = (post.subject || "").toLowerCase();
+        if (!postLoc.includes(searchText) && !postTitle.includes(searchText)) return;
+      }
+
       if (maxPriceFilter && Number(post.price) > maxPriceFilter) return;
+
+      // 50 KM Radius Check
+      if (activeUserGeoLocation && post.coords) {
+        const dist = getDistanceFromLatLonInKm(
+          activeUserGeoLocation.lat, activeUserGeoLocation.lng,
+          post.coords.lat, post.coords.lng
+        );
+        if (dist > 50) return; // Skip posts beyond 50km
+      }
 
       const firstImg = post.images && post.images.length > 0 ? post.images[0] : 'https://via.placeholder.com/300x180';
 
       const card = document.createElement('div');
-      card.className = "bg-white rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition";
+      card.className = "bg-white rounded-xl shadow overflow-hidden cursor-pointer hover:shadow-md transition";
       card.innerHTML = `
         <img src="${firstImg}" class="w-full h-40 object-cover" />
         <div class="p-3">
@@ -281,16 +299,14 @@ async function loadPosts() {
       container.appendChild(card);
     });
   } catch (e) {
-    console.error("Load posts error:", e);
-    container.innerHTML = "<p class='text-center py-4 text-gray-500'>Error loading posts.</p>";
+    container.innerHTML = "<p class='text-center py-4 text-gray-500'>Error loading listings.</p>";
   }
 }
 
+document.getElementById('search-location')?.addEventListener('input', loadPosts);
 document.getElementById('apply-filter-btn')?.addEventListener('click', loadPosts);
 
-// ==========================================
-// 6. POST DETAIL & CHAT INITIATION
-// ==========================================
+// Detail view
 function openPostDetail(post) {
   selectedPostForDetail = post;
   showSection('postDetail');
@@ -313,112 +329,30 @@ function openPostDetail(post) {
         <p class="font-semibold">Description:</p>
         <p>${post.description}</p>
       </div>
-      <p class="text-xs text-gray-400">Seller Phone: ${post.sellerPhone}</p>
     </div>
   `;
 }
 
 document.getElementById('back-to-home-btn')?.addEventListener('click', () => showSection('home'));
 
-document.getElementById('start-chat-btn')?.addEventListener('click', async () => {
-  if (!selectedPostForDetail) return;
-  if (selectedPostForDetail.sellerUid === currentUser.uid) {
-    return alert("This is your own advertisement!");
-  }
-
-  const chatId = [currentUser.uid, selectedPostForDetail.sellerUid].sort().join('_') + '_' + selectedPostForDetail.id;
-  activeChatId = chatId;
-
-  await setDoc(doc(db, "chats", chatId), {
-    chatId,
-    postId: selectedPostForDetail.id,
-    postTitle: selectedPostForDetail.subject,
-    participants: [currentUser.uid, selectedPostForDetail.sellerUid],
-    lastUpdated: serverTimestamp()
-  }, { merge: true });
-
-  openChatView(chatId, selectedPostForDetail.subject);
-});
-
-// ==========================================
-// 7. REAL-TIME CHAT
-// ==========================================
-function openChatView(chatId, title) {
-  activeChatId = chatId;
-  showSection('chatView');
-  const chatHeader = document.getElementById('chat-header');
-  if (chatHeader) chatHeader.innerText = title;
-
-  const msgContainer = document.getElementById('chat-messages');
-  if (!msgContainer) return;
-
-  const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
-  onSnapshot(q, (snapshot) => {
-    msgContainer.innerHTML = "";
-    snapshot.forEach(docSnap => {
-      const msg = docSnap.data();
-      const isMe = msg.senderUid === currentUser.uid;
-
-      const msgDiv = document.createElement('div');
-      msgDiv.className = `max-w-[75%] p-2.5 rounded-lg text-sm ${isMe ? 'bg-emerald-600 text-white self-end rounded-br-none' : 'bg-gray-200 text-gray-800 self-start rounded-bl-none'}`;
-      msgDiv.innerText = msg.text;
-      msgContainer.appendChild(msgDiv);
+// Fetch GPS Coords for Post creation
+document.getElementById('fetch-post-coords-btn')?.addEventListener('click', () => {
+  const status = document.getElementById('coords-status');
+  if (navigator.geolocation) {
+    status.innerText = "Fetching coordinates...";
+    navigator.geolocation.getCurrentPosition(position => {
+      currentPostCoords = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      status.innerText = "GPS Coordinates Attached Successfully!";
+    }, () => {
+      status.innerText = "Failed to fetch GPS location.";
     });
-    msgContainer.scrollTop = msgContainer.scrollHeight;
-  });
-}
-
-document.getElementById('send-msg-btn')?.addEventListener('click', async () => {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text || !activeChatId) return;
-
-  input.value = "";
-  await addDoc(collection(db, "chats", activeChatId, "messages"), {
-    text,
-    senderUid: currentUser.uid,
-    timestamp: serverTimestamp()
-  });
-
-  await setDoc(doc(db, "chats", activeChatId), {
-    lastUpdated: serverTimestamp()
-  }, { merge: true });
+  }
 });
 
-async function loadUserChats() {
-  showSection('chatList');
-  const container = document.getElementById('user-chats-container');
-  if (!container) return;
-  container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading chats...</p>";
-
-  const q = query(collection(db, "chats"), where("participants", "array-contains", currentUser.uid));
-  const snapshot = await getDocs(q);
-
-  container.innerHTML = "";
-  if (snapshot.empty) {
-    container.innerHTML = "<p class='text-center py-4 text-gray-500'>No conversations found.</p>";
-    return;
-  }
-
-  snapshot.forEach(docSnap => {
-    const chat = docSnap.data();
-    const item = document.createElement('div');
-    item.className = "p-3 bg-gray-50 rounded border hover:bg-gray-100 cursor-pointer flex justify-between items-center";
-    item.innerHTML = `
-      <div>
-        <h4 class="font-bold text-sm text-gray-800">${chat.postTitle}</h4>
-        <p class="text-xs text-gray-500">Tap to open chat</p>
-      </div>
-      <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
-    `;
-    item.addEventListener('click', () => openChatView(chat.chatId, chat.postTitle));
-    container.appendChild(item);
-  });
-}
-
-// ==========================================
-// 8. ADD POST & PAYMENT FLOW
-// ==========================================
+// Add Post submit
 document.getElementById('add-post-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -433,6 +367,7 @@ document.getElementById('add-post-form')?.addEventListener('submit', async (e) =
     size: document.getElementById('post-size').value,
     location: document.getElementById('post-location').value,
     description: document.getElementById('post-description').value,
+    coords: currentPostCoords || null,
     images: imagesBase64,
     sellerUid: currentUser.uid,
     sellerPhone: currentUser.phoneNumber,
@@ -442,117 +377,36 @@ document.getElementById('add-post-form')?.addEventListener('submit', async (e) =
   document.getElementById('disclaimer-modal')?.classList.remove('hidden');
 });
 
-document.getElementById('decline-disclaimer-btn')?.addEventListener('click', () => {
-  document.getElementById('disclaimer-modal')?.classList.add('hidden');
-});
-
 document.getElementById('accept-disclaimer-btn')?.addEventListener('click', () => {
   document.getElementById('disclaimer-modal')?.classList.add('hidden');
   document.getElementById('payment-modal')?.classList.remove('hidden');
 });
 
-document.getElementById('cancel-pay-btn')?.addEventListener('click', () => {
-  document.getElementById('payment-modal')?.classList.add('hidden');
-});
-
 document.getElementById('confirm-pay-btn')?.addEventListener('click', async () => {
   const utr = document.getElementById('payment-utr').value.trim();
-  if (!utr) return alert("Please enter Transaction UTR / Ref Number!");
+  if (!utr) return alert("Please enter Transaction UTR Number!");
 
   if (pendingPostData) {
     pendingPostData.utr = utr;
     await addDoc(collection(db, "posts"), pendingPostData);
     pendingPostData = null;
+    currentPostCoords = null;
     document.getElementById('payment-modal')?.classList.add('hidden');
     document.getElementById('add-post-form').reset();
-    alert("Post submitted successfully for review!");
+    alert("Listing posted successfully!");
     showSection('home');
     loadPosts();
   }
 });
 
-// ==========================================
-// 9. MY ADS & ACCOUNT
-// ==========================================
-async function loadMyAds() {
-  showSection('myAds');
-  const container = document.getElementById('my-ads-container');
-  if (!container) return;
-  container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading your ads...</p>";
-
-  const q = query(collection(db, "posts"), where("sellerUid", "==", currentUser.uid));
-  const snapshot = await getDocs(q);
-
-  container.innerHTML = "";
-  if (snapshot.empty) {
-    container.innerHTML = "<p class='text-center py-4 text-gray-500'>You haven't posted any ads yet.</p>";
-    return;
-  }
-
-  snapshot.forEach(docSnap => {
-    const post = docSnap.data();
-    const item = document.createElement('div');
-    item.className = "p-3 border rounded shadow-sm flex gap-3 items-center bg-white";
-    item.innerHTML = `
-      <img src="${post.images[0] || 'https://via.placeholder.com/80'}" class="w-16 h-16 object-cover rounded" />
-      <div class="flex-1">
-        <h4 class="font-bold text-sm">${post.subject}</h4>
-        <p class="text-xs text-emerald-600 font-bold">₹${Number(post.price).toLocaleString('en-IN')}</p>
-        <p class="text-xs text-gray-400">UTR: ${post.utr || 'N/A'}</p>
-      </div>
-    `;
-    container.appendChild(item);
-  });
-}
-
-function loadAccount() {
-  showSection('account');
-  const accImg = document.getElementById('acc-img');
-  const accName = document.getElementById('acc-name');
-  const accPhone = document.getElementById('acc-phone');
-  const accLoc = document.getElementById('acc-location');
-  const accAge = document.getElementById('acc-age');
-
-  if (accImg) accImg.src = currentUserData?.photoURL || 'https://via.placeholder.com/100';
-  if (accName) accName.innerText = currentUserData?.name || 'User';
-  if (accPhone) accPhone.innerText = currentUser?.phoneNumber || '';
-  if (accLoc) accLoc.innerText = "Location: " + (currentUserData?.location || 'N/A');
-  if (accAge) accAge.innerText = "Age: " + (currentUserData?.age || 'N/A');
-}
-
-document.getElementById('logout-btn')?.addEventListener('click', () => {
-  signOut(auth).then(() => location.reload());
-});
-
-// Bottom Navigation Event Listeners
-document.getElementById('nav-home')?.addEventListener('click', () => { showSection('home'); loadPosts(); });
-document.getElementById('nav-chat')?.addEventListener('click', loadUserChats);
-document.getElementById('nav-add')?.addEventListener('click', () => showSection('addPost')); // Attractive (+) Button Event
-document.getElementById('nav-myads')?.addEventListener('click', loadMyAds);
-document.getElementById('nav-account')?.addEventListener('click', loadAccount);
-
-// ==========================================
-// 10. APP INITIALIZATION
-// ==========================================
+// App Init
 window.addEventListener('DOMContentLoaded', () => {
   startSplashScreenAnimation(() => {
     onAuthStateChanged(auth, async (user) => {
       hideAllSections();
       if (user) {
         currentUser = user;
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            currentUserData = userDoc.data();
-            showSection('home');
-            loadPosts();
-          } else {
-            showSection('profileSetup');
-          }
-        } catch (e) {
-          console.error("User doc error:", e);
-          showSection('profileSetup');
-        }
+        checkUserProfile(user);
       } else {
         setupRecaptcha();
         showSection('auth');
