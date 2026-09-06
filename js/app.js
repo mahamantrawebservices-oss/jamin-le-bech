@@ -10,12 +10,13 @@ import {
 // 1. FIREBASE CONFIGURATION
 // ==========================================
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
+  apiKey: "AIzaSyA3g9nTWJ7Gsc5K8dpa06_Gs-8qxuKBC4g",
   authDomain: "jamin-le-bech.firebaseapp.com",
   projectId: "jamin-le-bech",
-  storageBucket: "jamin-le-bech.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  storageBucket: "jamin-le-bech.firebasestorage.app",
+  messagingSenderId: "167990473306",
+  appId: "1:167990473306:web:c8ac82925d5f5bbf2a5e63",
+  measurementId: "G-86474BTQCQ"
 };
 
 const app = initializeApp(firebaseConfig);
