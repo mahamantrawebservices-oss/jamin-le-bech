@@ -1,38 +1,292 @@
-<!-- Bottom Navigation Bar -->
-<nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around items-center px-2 py-1.5 z-50 shadow-lg">
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jamin Le Bech</title>
   
-  <!-- 1. Home -->
-  <button id="nav-home" class="flex flex-col items-center justify-center text-emerald-600 w-16 py-1 transition-all active:scale-95">
-    <i class="fa-solid fa-house text-xl mb-0.5"></i>
-    <span class="text-[11px] font-medium">Home</span>
-  </button>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans pb-20 select-none">
 
-  <!-- 2. Chat -->
-  <button id="nav-chat" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
-    <i class="fa-solid fa-comment-dots text-xl mb-0.5"></i>
-    <span class="text-[11px] font-medium">Chat</span>
-  </button>
-
-  <!-- 3. Attractive Floating (+) Add Post Button -->
-  <div class="relative -top-5 flex items-center justify-center">
-    <!-- Glowing Pulse Ring Behind Button -->
-    <div class="absolute w-14 h-14 bg-emerald-400 rounded-full animate-ping opacity-30"></div>
-    
-    <button id="nav-add" class="relative bg-gradient-to-tr from-emerald-600 to-teal-400 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 border-4 border-white">
-      <i class="fa-solid fa-plus text-2xl font-bold"></i>
-    </button>
+  <!-- ========================================== -->
+  <!-- 1. SPLASH SCREEN                           -->
+  <!-- ========================================== -->
+  <div id="splash-screen" class="fixed inset-0 bg-emerald-700 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-300">
+    <div class="text-center space-y-4">
+      <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
+        <i class="fa-solid fa-mountain-city text-4xl text-white"></i>
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-wide">જમીન લે વેચ</h1>
+      <p class="text-sm text-emerald-100">તમારી જમીન, સાચો ભાવ</p>
+      
+      <!-- Progress Bar -->
+      <div class="w-48 bg-emerald-900/50 rounded-full h-1.5 mx-auto overflow-hidden mt-6">
+        <div id="splash-progress" class="bg-white h-full w-0 transition-all duration-75"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- 4. My Ads -->
-  <button id="nav-myads" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
-    <i class="fa-solid fa-rectangle-ad text-xl mb-0.5"></i>
-    <span class="text-[11px] font-medium">My Ads</span>
-  </button>
+  <!-- App Header -->
+  <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-40 flex justify-between items-center">
+    <h1 class="text-xl font-bold flex items-center gap-2">
+      <i class="fa-solid fa-mountain-city"></i> જમીન લે વેચ
+    </h1>
+    <div id="recaptcha-container"></div>
+  </header>
 
-  <!-- 5. Account -->
-  <button id="nav-account" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
-    <i class="fa-solid fa-user text-xl mb-0.5"></i>
-    <span class="text-[11px] font-medium">Account</span>
-  </button>
+  <!-- Main Container -->
+  <main class="p-4 max-w-md mx-auto">
 
-</nav>
+    <!-- ========================================== -->
+    <!-- 2. AUTH SECTION                            -->
+    <!-- ========================================== -->
+    <section id="auth-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4 text-center mt-10">
+      <h2 class="text-2xl font-bold text-gray-800">લોગિન કરો</h2>
+      <p class="text-xs text-gray-500">મોબાઈલ નંબર વડે ઓટીપી મેળવો</p>
+      
+      <!-- Phone Input Group -->
+      <div id="phone-input-group" class="space-y-3">
+        <div class="flex items-center border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
+          <span class="bg-gray-100 px-3 py-2 text-gray-600 font-semibold">+91</span>
+          <input type="tel" id="phone-number" placeholder="10 અંકનો નંબર" class="w-full p-2 outline-none" maxlength="10">
+        </div>
+        <button id="send-otp-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
+          OTP મોકલો
+        </button>
+      </div>
+
+      <!-- OTP Input Group -->
+      <div id="otp-input-group" class="hidden space-y-3">
+        <input type="number" id="otp-code" placeholder="6-અંકનો OTP લખો" class="w-full p-2.5 border rounded-lg text-center tracking-widest text-lg outline-none focus:ring-2 focus:ring-emerald-500">
+        <button id="verify-otp-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
+          OTP વેરીફાય કરો
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. PROFILE SETUP SECTION                   -->
+    <!-- ========================================== -->
+    <section id="profile-setup-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4">
+      <h2 class="text-xl font-bold text-gray-800 text-center">પ્રોફાઈલ બનાવો</h2>
+      <form id="profile-form" class="space-y-3">
+        <div>
+          <label class="text-xs text-gray-600 font-medium">તમારું નામ</label>
+          <input type="text" id="prof-name" required class="w-full p-2 border rounded-lg text-sm outline-none focus:border-emerald-600">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600 font-medium">ગામ / શહેર</label>
+          <input type="text" id="prof-location" required class="w-full p-2 border rounded-lg text-sm outline-none focus:border-emerald-600">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600 font-medium">ઉંમર</label>
+          <input type="number" id="prof-age" required class="w-full p-2 border rounded-lg text-sm outline-none focus:border-emerald-600">
+        </div>
+        <div>
+          <label class="text-xs text-gray-600 font-medium">પ્રોફાઈલ ફોટો</label>
+          <input type="file" id="prof-pic" accept="image/*" class="w-full p-1.5 border rounded-lg text-xs">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700 transition">
+          પ્રોફાઈલ સેવ કરો
+        </button>
+      </form>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. HOME SECTION                            -->
+    <!-- ========================================== -->
+    <section id="home-section" class="hidden space-y-4">
+      <!-- Search & Filter Bar -->
+      <div class="bg-white p-3 rounded-lg shadow-sm space-y-2">
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="filter-location" placeholder="ગામ/સ્થળ શોધો..." class="p-2 border rounded text-xs outline-none">
+          <input type="number" id="filter-max-price" placeholder="મહત્તમ કિંમત ₹" class="p-2 border rounded text-xs outline-none">
+        </div>
+        <button id="apply-filter-btn" class="w-full bg-emerald-600 text-white py-1.5 rounded text-xs font-semibold hover:bg-emerald-700">
+          ફિલ્ટર લગાવો
+        </button>
+      </div>
+
+      <!-- Land Posts List Container -->
+      <div id="posts-container" class="space-y-3">
+        <!-- Posts will load dynamically -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 5. POST DETAIL SECTION                     -->
+    <!-- ========================================== -->
+    <section id="post-detail-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-4">
+      <button id="back-to-home-btn" class="text-xs text-emerald-600 font-bold flex items-center gap-1">
+        <i class="fa-solid fa-arrow-left"></i> પાછા જાઓ
+      </button>
+      <div id="post-detail-content">
+        <!-- Post details load dynamically -->
+      </div>
+      <button id="start-chat-btn" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-emerald-700">
+        <i class="fa-solid fa-comments"></i> વાતચીત (Chat) શરૂ કરો
+      </button>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 6. CHAT LIST SECTION                       -->
+    <!-- ========================================== -->
+    <section id="chat-list-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
+      <h2 class="text-lg font-bold text-gray-800">તમારા ચેટ્સ (Messages)</h2>
+      <div id="user-chats-container" class="space-y-2">
+        <!-- Chats list will load dynamically -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 7. CHAT VIEW SECTION                       -->
+    <!-- ========================================== -->
+    <section id="chat-view-section" class="hidden bg-white rounded-xl shadow-md flex flex-col h-[75vh]">
+      <div class="bg-emerald-600 text-white p-3 font-bold text-sm rounded-t-xl flex justify-between items-center">
+        <span id="chat-header">ચેટ Window</span>
+        <button onclick="showSection('chatList')" class="text-xs bg-emerald-700 px-2 py-1 rounded">બંધ કરો</button>
+      </div>
+      <div id="chat-messages" class="flex-1 p-3 overflow-y-auto space-y-2 bg-gray-50 flex flex-col">
+        <!-- Live Chat Messages -->
+      </div>
+      <div class="p-2 border-t flex gap-2">
+        <input type="text" id="chat-input" placeholder="મેસેજ લખો..." class="flex-1 p-2 border rounded-lg text-sm outline-none">
+        <button id="send-msg-btn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 8. ADD POST SECTION                        -->
+    <!-- ========================================== -->
+    <section id="add-post-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
+      <h2 class="text-lg font-bold text-gray-800">નવી જાહેરાત આપો</h2>
+      <form id="add-post-form" class="space-y-3">
+        <input type="text" id="post-subject" placeholder="જમીનનું શીર્ષક (દા.ત. 5 વીઘા જમીન)" required class="w-full p-2 border rounded text-sm outline-none">
+        <input type="number" id="post-price" placeholder="કિંમત ₹" required class="w-full p-2 border rounded text-sm outline-none">
+        <input type="text" id="post-size" placeholder="માપ (દા.ત. 2 વીઘા / 100 ચો.વાર)" required class="w-full p-2 border rounded text-sm outline-none">
+        <input type="text" id="post-location" placeholder="સ્થળ / ગામ / તાલુકો" required class="w-full p-2 border rounded text-sm outline-none">
+        <textarea id="post-description" placeholder="જમીન વિશે વધુ વિગત આપો..." required class="w-full p-2 border rounded text-sm outline-none h-20"></textarea>
+        <div>
+          <label class="text-xs text-gray-600">જમીનના ફોટા (મહત્તમ 5):</label>
+          <input type="file" id="post-images" accept="image/*" multiple required class="w-full p-1 border rounded text-xs mt-1">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-semibold hover:bg-emerald-700">
+          આગળ વધો
+        </button>
+      </form>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 9. MY ADS SECTION                          -->
+    <!-- ========================================== -->
+    <section id="my-ads-section" class="hidden bg-white p-4 rounded-xl shadow-md space-y-3">
+      <h2 class="text-lg font-bold text-gray-800">મારી જાહેરાતો</h2>
+      <div id="my-ads-container" class="space-y-2">
+        <!-- User's own ads load here -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 10. ACCOUNT SECTION                        -->
+    <!-- ========================================== -->
+    <section id="account-section" class="hidden bg-white p-6 rounded-xl shadow-md space-y-4 text-center">
+      <img id="acc-img" src="https://via.placeholder.com/100" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-emerald-600 shadow">
+      <div>
+        <h3 id="acc-name" class="text-xl font-bold text-gray-800">User Name</h3>
+        <p id="acc-phone" class="text-xs text-gray-500">+91 0000000000</p>
+      </div>
+      <div class="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded">
+        <p id="acc-location">Location: N/A</p>
+        <p id="acc-age">Age: N/A</p>
+      </div>
+      <button id="logout-btn" class="w-full bg-red-500 text-white py-2 rounded-lg font-semibold text-sm hover:bg-red-600">
+        લોગ આઉટ (Logout)
+      </button>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODALS (DISCLAIMER & PAYMENT)               -->
+  <!-- ========================================== -->
+  <!-- Disclaimer Modal -->
+  <div id="disclaimer-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-5 rounded-xl max-w-sm space-y-3">
+      <h3 class="font-bold text-red-600 text-lg">નિયમો અને શરતો</h3>
+      <p class="text-xs text-gray-600 leading-relaxed">
+        જમીન લે વેચ કરતી વખતે સંપૂર્ણ કાગળોની ચકાસણી જાતે કરવી. કોઈ પણ નાણાકીય લેવડ-દેવડ માટે આ એપ જવાબદાર રહેશે નહીં.
+      </p>
+      <div class="flex gap-2 pt-2">
+        <button id="decline-disclaimer-btn" class="w-1/2 bg-gray-200 py-2 rounded text-xs font-semibold">અસ્વીકાર</button>
+        <button id="accept-disclaimer-btn" class="w-1/2 bg-emerald-600 text-white py-2 rounded text-xs font-semibold">મંજૂર છે</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Modal -->
+  <div id="payment-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-5 rounded-xl max-w-sm space-y-3 text-center">
+      <h3 class="font-bold text-gray-800 text-lg">જાહેરાત ચાર્જ ચૂકવો</h3>
+      <p class="text-xs text-gray-500">નીચે આપેલા UPI નંબર પર ₹99 પેમેન્ટ કરી UTR નાખો.</p>
+      <div class="bg-gray-100 p-2 rounded text-sm font-mono font-bold text-emerald-700">UPI: 9876543210@paytm</div>
+      <input type="text" id="payment-utr" placeholder="12 അંકનો UTR / Reference No." class="w-full p-2 border rounded text-xs text-center outline-none">
+      <div class="flex gap-2 pt-2">
+        <button id="cancel-pay-btn" class="w-1/2 bg-gray-200 py-2 rounded text-xs font-semibold">રદ કરો</button>
+        <button id="confirm-pay-btn" class="w-1/2 bg-emerald-600 text-white py-2 rounded text-xs font-semibold">સબ્મિટ કરો</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- ATTRACTIVE FLOATING BOTTOM NAVIGATION      -->
+  <!-- ========================================== -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around items-center px-2 py-1.5 z-50 shadow-lg">
+    
+    <!-- 1. Home -->
+    <button id="nav-home" class="flex flex-col items-center justify-center text-emerald-600 w-16 py-1 transition-all active:scale-95">
+      <i class="fa-solid fa-house text-xl mb-0.5"></i>
+      <span class="text-[11px] font-medium">Home</span>
+    </button>
+
+    <!-- 2. Chat -->
+    <button id="nav-chat" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
+      <i class="fa-solid fa-comment-dots text-xl mb-0.5"></i>
+      <span class="text-[11px] font-medium">Chat</span>
+    </button>
+
+    <!-- 3. Attractive Floating (+) Add Post Button -->
+    <div class="relative -top-5 flex items-center justify-center">
+      <!-- Pulse Glowing Ring Behind Button -->
+      <div class="absolute w-14 h-14 bg-emerald-400 rounded-full animate-ping opacity-30"></div>
+      
+      <button id="nav-add" class="relative bg-gradient-to-tr from-emerald-600 to-teal-400 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 border-4 border-white">
+        <i class="fa-solid fa-plus text-2xl font-bold"></i>
+      </button>
+    </div>
+
+    <!-- 4. My Ads -->
+    <button id="nav-myads" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
+      <i class="fa-solid fa-rectangle-ad text-xl mb-0.5"></i>
+      <span class="text-[11px] font-medium">My Ads</span>
+    </button>
+
+    <!-- 5. Account -->
+    <button id="nav-account" class="flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 w-16 py-1 transition-all active:scale-95">
+      <i class="fa-solid fa-user text-xl mb-0.5"></i>
+      <span class="text-[11px] font-medium">Account</span>
+    </button>
+
+  </nav>
+
+  <!-- App Script Load -->
+  <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
