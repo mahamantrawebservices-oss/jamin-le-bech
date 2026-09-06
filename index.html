@@ -10,57 +10,73 @@
 </head>
 <body class="bg-gray-100 font-sans pb-16">
 
-  <!-- Splash Screen -->
-  <div id="splash-screen" class="fixed inset-0 bg-emerald-600 z-50 flex flex-col items-center justify-center text-white">
-    <div class="text-4xl font-bold mb-2"><i class="fa-solid font-house-flag"></i> Jamin-Le-Bech</div>
-    <p class="text-sm opacity-80">Buy & Sell Land Effortlessly</p>
+  <!-- SPLASH SCREEN WITH 2-SECOND PROGRESS BAR -->
+  <div id="splash-screen" class="fixed inset-0 bg-emerald-600 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-300">
+    <div class="text-4xl font-bold mb-2"><i class="fa-solid fa-house-flag"></i> Jamin-Le-Bech</div>
+    <p class="text-sm opacity-90 mb-6">Buy & Sell Land Effortlessly</p>
+    
+    <!-- Progress Bar Container -->
+    <div class="w-48 bg-emerald-800 rounded-full h-2 overflow-hidden shadow-inner">
+      <div id="splash-progress" class="bg-white h-full w-0 transition-all duration-300 ease-linear"></div>
+    </div>
   </div>
 
-  <!-- App Header -->
+  <!-- APP HEADER -->
   <header class="bg-emerald-600 text-white p-4 sticky top-0 z-30 shadow-md flex justify-between items-center">
-    <h1 class="text-xl font-bold">Jamin-Le-Bech</h1>
+    <h1 class="text-xl font-bold"><i class="fa-solid fa-house-flag"></i> Jamin-Le-Bech</h1>
     <div id="user-header-info" class="text-xs"></div>
   </header>
 
-  <!-- Main Container -->
+  <!-- MAIN CONTAINER -->
   <main id="app-content" class="p-4 max-w-md mx-auto min-h-screen">
 
     <!-- LOGIN SECTION -->
     <section id="auth-section" class="hidden bg-white p-6 rounded-lg shadow mt-8">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">Login via Mobile Number</h2>
+      <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Login via Mobile Number</h2>
       <div id="recaptcha-container"></div>
+      
       <div id="phone-input-group" class="space-y-4">
-        <input type="tel" id="phone-number" placeholder="+91 9876543210" class="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-        <button id="send-otp-btn" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold">Send OTP</button>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Enter 10-Digit Mobile Number</label>
+          <div class="flex">
+            <span class="bg-gray-100 border border-r-0 rounded-l p-3 text-gray-600 text-sm flex items-center">+91</span>
+            <input type="tel" id="phone-number" placeholder="9876543210" class="w-full p-3 border rounded-r focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+        <button id="send-otp-btn" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold hover:bg-emerald-700 transition">Send OTP</button>
       </div>
+
       <div id="otp-input-group" class="hidden space-y-4 mt-4">
-        <input type="text" id="otp-code" placeholder="Enter 6-digit OTP" class="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-        <button id="verify-otp-btn" class="w-full bg-emerald-700 text-white py-3 rounded font-semibold">Verify OTP</button>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Enter 6-Digit Verification Code</label>
+          <input type="text" id="otp-code" placeholder="123456" maxlength="6" class="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 text-center tracking-widest text-lg font-bold" />
+        </div>
+        <button id="verify-otp-btn" class="w-full bg-emerald-700 text-white py-3 rounded font-semibold hover:bg-emerald-800 transition">Verify OTP</button>
       </div>
     </section>
 
     <!-- MANDATORY PROFILE SETUP -->
     <section id="profile-setup-section" class="hidden bg-white p-6 rounded-lg shadow mt-4">
-      <h2 class="text-xl font-bold text-gray-800 mb-4">Complete Your Profile</h2>
+      <h2 class="text-xl font-bold text-gray-800 mb-2">Complete Your Profile</h2>
       <p class="text-xs text-red-500 mb-4">* Required before using the platform</p>
       <form id="profile-form" class="space-y-4">
         <div>
           <label class="text-sm font-medium">Full Name</label>
-          <input type="text" id="prof-name" required class="w-full p-2 border rounded" />
+          <input type="text" id="prof-name" required class="w-full p-2 border rounded focus:ring-1 focus:ring-emerald-500" />
         </div>
         <div>
           <label class="text-sm font-medium">Location / City</label>
-          <input type="text" id="prof-location" required class="w-full p-2 border rounded" />
+          <input type="text" id="prof-location" required class="w-full p-2 border rounded focus:ring-1 focus:ring-emerald-500" />
         </div>
         <div>
           <label class="text-sm font-medium">Age</label>
-          <input type="number" id="prof-age" min="18" required class="w-full p-2 border rounded" />
+          <input type="number" id="prof-age" min="18" required class="w-full p-2 border rounded focus:ring-1 focus:ring-emerald-500" />
         </div>
         <div>
           <label class="text-sm font-medium">Profile Photo</label>
-          <input type="file" id="prof-pic" accept="image/*" required class="w-full p-2 border rounded" />
+          <input type="file" id="prof-pic" accept="image/*" required class="w-full p-2 border rounded text-xs" />
         </div>
-        <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold">Save Profile</button>
+        <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold hover:bg-emerald-700 transition">Save Profile</button>
       </form>
     </section>
 
@@ -78,27 +94,27 @@
           <input type="text" id="filter-location" placeholder="Search Location..." class="w-1/2 p-2 text-sm border rounded" />
           <input type="number" id="filter-max-price" placeholder="Max Price (₹)" class="w-1/2 p-2 text-sm border rounded" />
         </div>
-        <button id="apply-filter-btn" class="w-full bg-gray-800 text-white py-1.5 text-xs rounded font-medium">Apply Filter</button>
+        <button id="apply-filter-btn" class="w-full bg-gray-800 text-white py-1.5 text-xs rounded font-medium hover:bg-gray-900 transition">Apply Filter</button>
       </div>
 
       <!-- Post List -->
       <div id="posts-container" class="space-y-4"></div>
     </section>
 
-    <!-- POST DETAILS & CHAT DISCLAIMER -->
+    <!-- POST DETAILS -->
     <section id="post-detail-section" class="hidden bg-white p-4 rounded-lg shadow space-y-4">
       <button id="back-to-home-btn" class="text-sm text-emerald-600 font-semibold mb-2"><i class="fa-solid fa-arrow-left"></i> Back</button>
       <div id="post-detail-content"></div>
-      <button id="start-chat-btn" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold">Start Chat with Seller</button>
+      <button id="start-chat-btn" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold hover:bg-emerald-700 transition">Start Chat with Seller</button>
     </section>
 
     <!-- CHAT VIEW -->
     <section id="chat-view-section" class="hidden bg-white p-4 rounded-lg shadow flex flex-col h-[75vh]">
       <div id="chat-header" class="border-b pb-2 font-bold text-gray-800"></div>
-      <div id="chat-messages" class="flex-1 overflow-y-auto my-3 space-y-2 pr-1"></div>
+      <div id="chat-messages" class="flex-1 overflow-y-auto my-3 space-y-2 pr-1 flex flex-col"></div>
       <div class="flex gap-2">
         <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 p-2 border rounded text-sm focus:outline-none" />
-        <button id="send-msg-btn" class="bg-emerald-600 text-white px-4 rounded text-sm font-semibold">Send</button>
+        <button id="send-msg-btn" class="bg-emerald-600 text-white px-4 rounded text-sm font-semibold hover:bg-emerald-700 transition">Send</button>
       </div>
     </section>
 
@@ -108,20 +124,20 @@
       <div id="user-chats-container" class="space-y-2"></div>
     </section>
 
-    <!-- ADD POST FORM & PAYMENT -->
+    <!-- ADD POST FORM -->
     <section id="add-post-section" class="hidden bg-white p-6 rounded-lg shadow space-y-4">
       <h2 class="text-xl font-bold text-gray-800">Post Land for Sale</h2>
       <form id="add-post-form" class="space-y-3">
-        <input type="text" id="post-subject" placeholder="Title/Subject (e.g., Agriculture Land)" required class="w-full p-2 border rounded" />
-        <input type="number" id="post-price" placeholder="Price (INR)" required class="w-full p-2 border rounded" />
-        <input type="text" id="post-size" placeholder="Land Measurement (e.g., 2 Vigha / 1000 Sqft)" required class="w-full p-2 border rounded" />
-        <input type="text" id="post-location" placeholder="City / Location" required class="w-full p-2 border rounded" />
-        <textarea id="post-description" placeholder="Full Description" required class="w-full p-2 border rounded h-24"></textarea>
+        <input type="text" id="post-subject" placeholder="Title/Subject (e.g., Agriculture Land)" required class="w-full p-2 border rounded text-sm" />
+        <input type="number" id="post-price" placeholder="Price (INR)" required class="w-full p-2 border rounded text-sm" />
+        <input type="text" id="post-size" placeholder="Land Measurement (e.g., 2 Vigha / 1000 Sqft)" required class="w-full p-2 border rounded text-sm" />
+        <input type="text" id="post-location" placeholder="City / Location" required class="w-full p-2 border rounded text-sm" />
+        <textarea id="post-description" placeholder="Full Description" required class="w-full p-2 border rounded h-24 text-sm"></textarea>
         <div>
           <label class="text-xs text-gray-600">Select Images (Max 5)</label>
-          <input type="file" id="post-images" accept="image/*" multiple required class="w-full p-2 border rounded" />
+          <input type="file" id="post-images" accept="image/*" multiple required class="w-full p-2 border rounded text-xs" />
         </div>
-        <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold">Proceed to Pay ₹100</button>
+        <button type="submit" class="w-full bg-emerald-600 text-white py-3 rounded font-semibold hover:bg-emerald-700 transition">Proceed to Pay ₹100</button>
       </form>
     </section>
 
@@ -133,12 +149,12 @@
 
     <!-- ACCOUNT SECTION -->
     <section id="account-section" class="hidden bg-white p-6 rounded-lg shadow space-y-4 text-center">
-      <img id="acc-img" src="" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-emerald-600" />
+      <img id="acc-img" src="https://via.placeholder.com/100" class="w-24 h-24 rounded-full mx-auto object-cover border-2 border-emerald-600" />
       <h3 id="acc-name" class="text-xl font-bold"></h3>
       <p id="acc-phone" class="text-sm text-gray-500"></p>
       <p id="acc-location" class="text-sm text-gray-600"></p>
       <p id="acc-age" class="text-sm text-gray-600"></p>
-      <button id="logout-btn" class="w-full bg-red-500 text-white py-2 rounded font-semibold mt-4">Logout</button>
+      <button id="logout-btn" class="w-full bg-red-500 text-white py-2 rounded font-semibold mt-4 hover:bg-red-600 transition">Logout</button>
     </section>
 
   </main>
@@ -163,7 +179,6 @@
       <h3 class="text-lg font-bold">Pay Listing Fee: ₹100</h3>
       <p class="text-xs text-gray-500">Scan QR Code or click UPI ID to pay using any UPI App</p>
       
-      <!-- UPI QR Code Example -->
       <div class="flex justify-center my-2">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=your-upi-id@upi&pn=JaminLeBech&am=100&cu=INR" alt="UPI QR Code" class="border p-1" />
       </div>
@@ -187,6 +202,7 @@
     <button id="nav-account" class="flex flex-col items-center text-gray-500"><i class="fa-solid fa-user"></i><span class="text-[10px]">Account</span></button>
   </nav>
 
+  <!-- JavaScript Module Load -->
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
