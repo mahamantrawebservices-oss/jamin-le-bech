@@ -53,10 +53,12 @@ function hideAllSections() {
 
 function showSection(sectionKey) {
   hideAllSections();
-  sections[sectionKey]?.classList.remove('hidden');
+  if (sections[sectionKey]) {
+    sections[sectionKey].classList.remove('hidden');
+  }
 }
 
-// Convert File to Base64 (Storage vagar image save karva mate)
+// Convert File to Base64
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -67,7 +69,7 @@ function fileToBase64(file) {
 }
 
 // ==========================================
-// 3. SPLASH SCREEN (2-SECOND PROGRESS BAR)
+// 3. SPLASH SCREEN (ANIMATION & REMOVAL)
 // ==========================================
 function startSplashScreenAnimation(callback) {
   const progressBar = document.getElementById('splash-progress');
@@ -83,14 +85,14 @@ function startSplashScreenAnimation(callback) {
       if (splashScreen) {
         splashScreen.classList.add('opacity-0');
         setTimeout(() => {
-          splashScreen.classList.add('hidden');
+          splashScreen.style.display = 'none'; // Completely unblock UI overlay
           callback();
         }, 300);
       } else {
         callback();
       }
     }
-  }, 40); // 40ms * 50 steps = 2000ms (2 seconds)
+  }, 40);
 }
 
 // ==========================================
@@ -141,41 +143,72 @@ document.getElementById('verify-otp-btn')?.addEventListener('click', async () =>
 });
 
 async function checkUserProfile(user) {
-  const userDoc = await getDoc(doc(db, "users", user.uid));
-  if (userDoc.exists()) {
-    currentUserData = userDoc.data();
-    showSection('home');
-    loadPosts();
-  } else {
+  try {
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    if (userDoc.exists()) {
+      currentUserData = userDoc.data();
+      showSection('home');
+      loadPosts();
+    } else {
+      showSection('profileSetup');
+    }
+  } catch (err) {
+    console.error("Firestore user fetch error:", err);
     showSection('profileSetup');
   }
 }
 
-// Profile Save
+// Fixed Profile Save Event Listener
 document.getElementById('profile-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const name = document.getElementById('prof-name').value;
-  const location = document.getElementById('prof-location').value;
-  const age = document.getElementById('prof-age').value;
-  const picFile = document.getElementById('prof-pic').files[0];
 
-  let picBase64 = "";
-  if (picFile) picBase64 = await fileToBase64(picFile);
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn ? submitBtn.innerText : "Save";
 
-  const userData = {
-    uid: currentUser.uid,
-    phone: currentUser.phoneNumber,
-    name,
-    location,
-    age,
-    photoURL: picBase64,
-    createdAt: serverTimestamp()
-  };
+  if (submitBtn) {
+    submitBtn.innerText = "Saving Profile...";
+    submitBtn.disabled = true;
+  }
 
-  await setDoc(doc(db, "users", currentUser.uid), userData);
-  currentUserData = userData;
-  showSection('home');
-  loadPosts();
+  try {
+    const name = document.getElementById('prof-name').value.trim();
+    const location = document.getElementById('prof-location').value.trim();
+    const age = document.getElementById('prof-age').value.trim();
+    const picFile = document.getElementById('prof-pic')?.files[0];
+
+    let picBase64 = "";
+    if (picFile) {
+      picBase64 = await fileToBase64(picFile);
+    }
+
+    const userData = {
+      uid: currentUser.uid,
+      phone: currentUser.phoneNumber || "",
+      name: name,
+      location: location,
+      age: age,
+      photoURL: picBase64,
+      createdAt: serverTimestamp()
+    };
+
+    // Save to Firestore Database
+    await setDoc(doc(db, "users", currentUser.uid), userData);
+
+    currentUserData = userData;
+    alert("Profile saved successfully!");
+
+    // Navigate to Home section
+    showSection('home');
+    loadPosts();
+  } catch (err) {
+    console.error("Profile save error:", err);
+    alert("Failed to save profile: " + err.message);
+  } finally {
+    if (submitBtn) {
+      submitBtn.innerText = originalBtnText;
+      submitBtn.disabled = false;
+    }
+  }
 });
 
 // ==========================================
@@ -186,44 +219,49 @@ async function loadPosts() {
   if (!container) return;
   container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading ads...</p>";
 
-  const locationFilter = document.getElementById('filter-location').value.toLowerCase().trim();
-  const maxPriceFilter = Number(document.getElementById('filter-max-price').value);
+  const locationFilter = document.getElementById('filter-location')?.value.toLowerCase().trim() || "";
+  const maxPriceFilter = Number(document.getElementById('filter-max-price')?.value) || 0;
 
-  const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-  const snapshot = await getDocs(q);
+  try {
+    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
 
-  container.innerHTML = "";
-  if (snapshot.empty) {
-    container.innerHTML = "<p class='text-center py-4 text-gray-500'>No land listings available.</p>";
-    return;
-  }
+    container.innerHTML = "";
+    if (snapshot.empty) {
+      container.innerHTML = "<p class='text-center py-4 text-gray-500'>No land listings available.</p>";
+      return;
+    }
 
-  snapshot.forEach(docSnap => {
-    const post = { id: docSnap.id, ...docSnap.data() };
+    snapshot.forEach(docSnap => {
+      const post = { id: docSnap.id, ...docSnap.data() };
 
-    // Filter Logic
-    if (locationFilter && !post.location.toLowerCase().includes(locationFilter)) return;
-    if (maxPriceFilter && Number(post.price) > maxPriceFilter) return;
+      // Filter Logic
+      if (locationFilter && !post.location?.toLowerCase().includes(locationFilter)) return;
+      if (maxPriceFilter && Number(post.price) > maxPriceFilter) return;
 
-    const firstImg = post.images && post.images.length > 0 ? post.images[0] : 'https://via.placeholder.com/300x180';
+      const firstImg = post.images && post.images.length > 0 ? post.images[0] : 'https://via.placeholder.com/300x180';
 
-    const card = document.createElement('div');
-    card.className = "bg-white rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition";
-    card.innerHTML = `
-      <img src="${firstImg}" class="w-full h-40 object-cover" />
-      <div class="p-3">
-        <div class="flex justify-between items-center">
-          <span class="text-lg font-bold text-emerald-700">₹${Number(post.price).toLocaleString('en-IN')}</span>
-          <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">${post.size}</span>
+      const card = document.createElement('div');
+      card.className = "bg-white rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition";
+      card.innerHTML = `
+        <img src="${firstImg}" class="w-full h-40 object-cover" />
+        <div class="p-3">
+          <div class="flex justify-between items-center">
+            <span class="text-lg font-bold text-emerald-700">₹${Number(post.price).toLocaleString('en-IN')}</span>
+            <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">${post.size}</span>
+          </div>
+          <h3 class="font-semibold text-gray-800 text-sm mt-1">${post.subject}</h3>
+          <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot"></i> ${post.location}</p>
         </div>
-        <h3 class="font-semibold text-gray-800 text-sm mt-1">${post.subject}</h3>
-        <p class="text-xs text-gray-500 mt-1"><i class="fa-solid fa-location-dot"></i> ${post.location}</p>
-      </div>
-    `;
+      `;
 
-    card.addEventListener('click', () => openPostDetail(post));
-    container.appendChild(card);
-  });
+      card.addEventListener('click', () => openPostDetail(post));
+      container.appendChild(card);
+    });
+  } catch (e) {
+    console.error("Load posts error:", e);
+    container.innerHTML = "<p class='text-center py-4 text-gray-500'>Error loading posts.</p>";
+  }
 }
 
 document.getElementById('apply-filter-btn')?.addEventListener('click', loadPosts);
@@ -236,6 +274,8 @@ function openPostDetail(post) {
   showSection('postDetail');
 
   const content = document.getElementById('post-detail-content');
+  if (!content) return;
+
   const imagesHTML = (post.images || []).map(img => `<img src="${img}" class="w-full h-48 object-cover rounded shadow-sm mb-2" />`).join('');
 
   content.innerHTML = `
@@ -284,9 +324,11 @@ document.getElementById('start-chat-btn')?.addEventListener('click', async () =>
 function openChatView(chatId, title) {
   activeChatId = chatId;
   showSection('chatView');
-  document.getElementById('chat-header').innerText = title;
+  const chatHeader = document.getElementById('chat-header');
+  if (chatHeader) chatHeader.innerText = title;
 
   const msgContainer = document.getElementById('chat-messages');
+  if (!msgContainer) return;
 
   const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
   onSnapshot(q, (snapshot) => {
@@ -324,6 +366,7 @@ document.getElementById('send-msg-btn')?.addEventListener('click', async () => {
 async function loadUserChats() {
   showSection('chatList');
   const container = document.getElementById('user-chats-container');
+  if (!container) return;
   container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading chats...</p>";
 
   const q = query(collection(db, "chats"), where("participants", "array-contains", currentUser.uid));
@@ -413,6 +456,7 @@ document.getElementById('confirm-pay-btn')?.addEventListener('click', async () =
 async function loadMyAds() {
   showSection('myAds');
   const container = document.getElementById('my-ads-container');
+  if (!container) return;
   container.innerHTML = "<p class='text-center py-4 text-gray-500'>Loading your ads...</p>";
 
   const q = query(collection(db, "posts"), where("sellerUid", "==", currentUser.uid));
@@ -442,11 +486,17 @@ async function loadMyAds() {
 
 function loadAccount() {
   showSection('account');
-  document.getElementById('acc-img').src = currentUserData?.photoURL || 'https://via.placeholder.com/100';
-  document.getElementById('acc-name').innerText = currentUserData?.name || 'User';
-  document.getElementById('acc-phone').innerText = currentUser.phoneNumber;
-  document.getElementById('acc-location').innerText = "Location: " + (currentUserData?.location || 'N/A');
-  document.getElementById('acc-age').innerText = "Age: " + (currentUserData?.age || 'N/A');
+  const accImg = document.getElementById('acc-img');
+  const accName = document.getElementById('acc-name');
+  const accPhone = document.getElementById('acc-phone');
+  const accLoc = document.getElementById('acc-location');
+  const accAge = document.getElementById('acc-age');
+
+  if (accImg) accImg.src = currentUserData?.photoURL || 'https://via.placeholder.com/100';
+  if (accName) accName.innerText = currentUserData?.name || 'User';
+  if (accPhone) accPhone.innerText = currentUser?.phoneNumber || '';
+  if (accLoc) accLoc.innerText = "Location: " + (currentUserData?.location || 'N/A');
+  if (accAge) accAge.innerText = "Age: " + (currentUserData?.age || 'N/A');
 }
 
 document.getElementById('logout-btn')?.addEventListener('click', () => {
